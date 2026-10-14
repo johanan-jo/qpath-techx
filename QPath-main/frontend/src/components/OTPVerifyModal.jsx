@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { KeyRound, CheckCircle2, AlertCircle, X, ShieldCheck, Activity } from 'lucide-react';
 import { verifyDeliveryOTP } from '../services/api';
 
 /* ─────────────────────────────────────────────────────────────────
@@ -6,74 +7,6 @@ import { verifyDeliveryOTP } from '../services/api';
    Driver enters the customer's 6-digit OTP to verify delivery.
    Backend is sole authority — no client-side OTP logic.
 ───────────────────────────────────────────────────────────────────── */
-
-const STYLES = {
-  overlay: {
-    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-    background: 'rgba(0,0,0,0.75)', zIndex: 9000,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    backdropFilter: 'blur(4px)',
-  },
-  modal: {
-    background: '#1e293b',
-    border: '1px solid #334155',
-    borderRadius: '20px',
-    padding: '32px',
-    width: '100%',
-    maxWidth: '400px',
-    boxShadow: '0 24px 64px rgba(0,0,0,0.7)',
-    animation: 'slideUp 0.2s ease',
-  },
-  title: {
-    fontSize: '20px', fontWeight: 800, color: '#f1f5f9', marginBottom: '6px',
-  },
-  sub: {
-    fontSize: '13px', color: '#64748b', lineHeight: 1.5, marginBottom: '24px',
-  },
-  stopName: { fontWeight: 600, color: '#60a5fa' },
-  // OTP input row
-  digitRow: {
-    display: 'flex', gap: '8px', justifyContent: 'center', marginBottom: '20px',
-  },
-  digit: (focused, hasValue, error) => ({
-    width: '48px', height: '56px',
-    background: '#0f172a',
-    border: `2px solid ${error ? '#ef4444' : focused ? '#3b82f6' : hasValue ? '#10b981' : '#334155'}`,
-    borderRadius: '10px',
-    textAlign: 'center',
-    fontSize: '26px', fontWeight: 700,
-    color: '#f1f5f9',
-    outline: 'none',
-    transition: 'border-color 0.15s',
-    caretColor: 'transparent',
-  }),
-  // Feedback
-  error: {
-    background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)',
-    borderRadius: '8px', padding: '10px 14px', fontSize: '13px',
-    color: '#fca5a5', marginBottom: '16px',
-  },
-  success: {
-    background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)',
-    borderRadius: '8px', padding: '10px 14px', fontSize: '13px',
-    color: '#6ee7b7', marginBottom: '16px',
-  },
-  info: {
-    background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)',
-    borderRadius: '8px', padding: '10px 14px', fontSize: '12px',
-    color: '#93c5fd', marginBottom: '16px',
-    lineHeight: 1.5,
-  },
-  btnRow: { display: 'flex', gap: '10px' },
-  btn: (color, disabled) => ({
-    flex: 1, padding: '12px', borderRadius: '10px', border: 'none',
-    background: disabled ? '#334155' : color || '#3b82f6',
-    color: disabled ? '#64748b' : '#fff',
-    fontWeight: 700, fontSize: '14px',
-    cursor: disabled ? 'not-allowed' : 'pointer',
-    transition: 'opacity 0.15s',
-  }),
-};
 
 export default function OTPVerifyModal({ stop, driverId, driverGps, onSuccess, onCancel }) {
   const [digits, setDigits] = useState(['', '', '', '', '', '']);
@@ -84,7 +17,6 @@ export default function OTPVerifyModal({ stop, driverId, driverGps, onSuccess, o
   const inputRefs = useRef([]);
 
   useEffect(() => {
-    // Auto-focus first digit on open
     setTimeout(() => inputRefs.current[0]?.focus(), 80);
   }, []);
 
@@ -128,7 +60,7 @@ export default function OTPVerifyModal({ stop, driverId, driverGps, onSuccess, o
 
   const handleSubmit = async () => {
     if (otp.length !== 6) {
-      setError('Please enter the full 6-digit OTP.');
+      setError('Please enter the full 6-digit verification code.');
       return;
     }
     setLoading(true);
@@ -136,10 +68,9 @@ export default function OTPVerifyModal({ stop, driverId, driverGps, onSuccess, o
     try {
       const res = await verifyDeliveryOTP(stop.id, otp, driverId, driverGps);
       setSuccess(true);
-      setTimeout(() => onSuccess(res.data), 1200);
+      setTimeout(() => onSuccess(res.data), 1000);
     } catch (e) {
-      setError(e.response?.data?.detail || 'OTP verification failed. Please try again.');
-      // Clear digits on error
+      setError(e.response?.data?.detail || 'OTP verification failed. Please check the code with customer.');
       setDigits(['', '', '', '', '', '']);
       setTimeout(() => {
         inputRefs.current[0]?.focus();
@@ -151,27 +82,69 @@ export default function OTPVerifyModal({ stop, driverId, driverGps, onSuccess, o
   };
 
   return (
-    <div style={STYLES.overlay} onClick={(e) => { if (e.target === e.currentTarget && !loading) onCancel(); }}>
-      <div style={STYLES.modal}>
-        <style>{`@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }`}</style>
-
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(5, 7, 12, 0.75)',
+        zIndex: 9000,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backdropFilter: 'blur(4px)',
+        padding: '16px'
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget && !loading) onCancel(); }}
+    >
+      <div style={{
+        background: 'var(--bg-surface-raised, #1f2737)',
+        border: '1px solid var(--border-strong, #334158)',
+        borderRadius: '6px',
+        padding: '24px',
+        width: '100%',
+        maxWidth: '400px',
+        boxShadow: '0 20px 40px -10px rgba(0,0,0,0.8)',
+      }}>
         {/* Header */}
-        <div style={{ fontSize: '30px', marginBottom: '12px' }}>🔐</div>
-        <div style={STYLES.title}>OTP Verification</div>
-        <div style={STYLES.sub}>
-          Ask the customer for their 6-digit OTP to complete delivery to{' '}
-          <span style={STYLES.stopName}>{stop?.name || 'this stop'}</span>.
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+          <div style={{
+            width: '28px',
+            height: '28px',
+            borderRadius: '4px',
+            background: 'var(--color-primary-subtle, rgba(37, 99, 235, 0.12))',
+            color: 'var(--color-primary, #2563eb)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <KeyRound size={15} />
+          </div>
+          <div>
+            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary, #f8fafc)' }}>
+              Delivery OTP Handshake
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted, #64748b)' }}>
+              Recipient: <strong style={{ color: 'var(--text-secondary, #94a3b8)' }}>{stop?.name || 'Customer'}</strong>
+            </div>
+          </div>
         </div>
 
-        {/* Info */}
-        <div style={STYLES.info}>
-          💡 The customer can see their OTP in their <strong>QPath Customer Dashboard</strong>.
-          Enter the code below exactly as provided.
+        <div style={{
+          background: 'var(--bg-canvas, #0f141c)',
+          border: '1px solid var(--border-subtle, #242e3f)',
+          borderRadius: '4px',
+          padding: '8px 10px',
+          fontSize: '11px',
+          color: 'var(--text-muted, #64748b)',
+          marginBottom: '16px',
+          lineHeight: 1.4
+        }}>
+          Ask customer for the 6-digit OTP visible on their live QPath Tracking screen.
         </div>
 
         {/* OTP Digit Inputs */}
         {!success && (
-          <div style={STYLES.digitRow} onPaste={handlePaste}>
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginBottom: '16px' }} onPaste={handlePaste}>
             {digits.map((d, i) => (
               <input
                 key={i}
@@ -180,7 +153,20 @@ export default function OTPVerifyModal({ stop, driverId, driverGps, onSuccess, o
                 inputMode="numeric"
                 maxLength={1}
                 value={d}
-                style={STYLES.digit(focusIdx === i, !!d, !!error)}
+                style={{
+                  width: '44px',
+                  height: '48px',
+                  background: 'var(--bg-canvas, #0f141c)',
+                  border: `1.5px solid ${error ? 'var(--color-danger, #ef4444)' : focusIdx === i ? 'var(--color-primary, #2563eb)' : d ? 'var(--color-success, #10b981)' : 'var(--border-subtle, #242e3f)'}`,
+                  borderRadius: '4px',
+                  textAlign: 'center',
+                  fontSize: '22px',
+                  fontWeight: 700,
+                  fontFamily: 'var(--font-mono)',
+                  color: 'var(--text-primary, #f8fafc)',
+                  outline: 'none',
+                  transition: 'border-color 0.15s ease'
+                }}
                 onChange={e => handleDigit(i, e.target.value)}
                 onKeyDown={e => handleKeyDown(i, e)}
                 onFocus={() => setFocusIdx(i)}
@@ -190,28 +176,82 @@ export default function OTPVerifyModal({ stop, driverId, driverGps, onSuccess, o
           </div>
         )}
 
-        {/* Feedback */}
-        {error && <div style={STYLES.error}>⚠️ {error}</div>}
-        {success && (
-          <div style={{ ...STYLES.success, textAlign: 'center' }}>
-            <div style={{ fontSize: '28px', marginBottom: '6px' }}>✅</div>
-            <div style={{ fontWeight: 700, fontSize: '15px' }}>OTP Verified!</div>
-            <div style={{ fontSize: '12px', marginTop: '4px' }}>Delivery marked as completed.</div>
+        {/* Feedback Messages */}
+        {error && (
+          <div style={{
+            background: 'var(--color-danger-subtle, rgba(239, 68, 68, 0.12))',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: '4px',
+            padding: '8px 10px',
+            fontSize: '11px',
+            color: 'var(--color-danger, #ef4444)',
+            marginBottom: '14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}>
+            <AlertCircle size={14} style={{ flexShrink: 0 }} />
+            <span>{error}</span>
           </div>
         )}
 
-        {/* Buttons */}
+        {success && (
+          <div style={{
+            background: 'var(--color-success-subtle, rgba(16, 185, 129, 0.12))',
+            border: '1px solid rgba(16, 185, 129, 0.3)',
+            borderRadius: '4px',
+            padding: '12px',
+            textAlign: 'center',
+            marginBottom: '14px'
+          }}>
+            <CheckCircle2 size={24} style={{ color: 'var(--color-success, #10b981)', margin: '0 auto 4px auto' }} />
+            <div style={{ fontWeight: 600, fontSize: '13px', color: 'var(--color-success, #10b981)' }}>OTP Verified</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted, #64748b)' }}>Delivery registered successfully.</div>
+          </div>
+        )}
+
+        {/* Actions */}
         {!success && (
-          <div style={STYLES.btnRow}>
-            <button style={STYLES.btn('#475569', loading)} onClick={onCancel} disabled={loading}>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={onCancel}
+              disabled={loading}
+              style={{
+                flex: 1,
+                padding: '8px 12px',
+                borderRadius: '4px',
+                border: '1px solid var(--border-subtle, #242e3f)',
+                background: 'transparent',
+                color: 'var(--text-secondary, #94a3b8)',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: loading ? 'not-allowed' : 'pointer'
+              }}
+            >
               Cancel
             </button>
             <button
-              style={STYLES.btn('#10b981', loading || otp.length < 6)}
               onClick={handleSubmit}
               disabled={loading || otp.length < 6}
+              style={{
+                flex: 1.5,
+                padding: '8px 12px',
+                borderRadius: '4px',
+                border: 'none',
+                background: 'var(--color-primary, #2563eb)',
+                color: '#ffffff',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: loading || otp.length < 6 ? 'not-allowed' : 'pointer',
+                opacity: otp.length < 6 ? 0.6 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '5px'
+              }}
             >
-              {loading ? '⏳ Verifying…' : '✓ Verify & Complete'}
+              <ShieldCheck size={14} />
+              <span>{loading ? 'Verifying...' : 'Verify OTP'}</span>
             </button>
           </div>
         )}

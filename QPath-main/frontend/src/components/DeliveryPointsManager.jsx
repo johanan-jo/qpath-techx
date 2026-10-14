@@ -1,28 +1,6 @@
 import React, { useState } from 'react';
 import { searchAddress } from '../services/api';
 
-const PRESET_LOCATIONS = {
-  delhi: [
-    { id: 'd1', name: 'India Gate, New Delhi', lat: 28.6129, lng: 77.2295, demand: 15.0 },
-    { id: 'd2', name: 'AIIMS Hospital, Ansari Nagar', lat: 28.5672, lng: 77.2100, demand: 20.0 },
-    { id: 'd3', name: 'Karol Bagh Market', lat: 28.6517, lng: 77.1906, demand: 12.0 },
-    { id: 'd4', name: 'Lajpat Nagar Central Market', lat: 28.5700, lng: 77.2400, demand: 18.0 },
-    { id: 'd5', name: 'Hauz Khas Village', lat: 28.5494, lng: 77.1932, demand: 10.0 }
-  ],
-  mumbai: [
-    { id: 'd1', name: 'Gateway of India, Colaba', lat: 18.9220, lng: 72.8347, demand: 15.0 },
-    { id: 'd2', name: 'Bandra Kurla Complex (BKC)', lat: 19.0657, lng: 72.8688, demand: 25.0 },
-    { id: 'd3', name: 'Juhu Beach, Andheri West', lat: 19.0988, lng: 72.8267, demand: 14.0 },
-    { id: 'd4', name: 'Dadar TT Circle', lat: 19.0178, lng: 72.8478, demand: 18.0 }
-  ],
-  bengaluru: [
-    { id: 'd1', name: 'MG Road Metro Station', lat: 12.9756, lng: 77.6066, demand: 12.0 },
-    { id: 'd2', name: 'Indiranagar 100ft Road', lat: 12.9784, lng: 77.6408, demand: 16.0 },
-    { id: 'd3', name: 'Koramangala 5th Block', lat: 12.9352, lng: 77.6245, demand: 22.0 },
-    { id: 'd4', name: 'Whitefield ITPL Main Road', lat: 12.9866, lng: 77.7381, demand: 20.0 }
-  ]
-};
-
 export default function DeliveryPointsManager({
   depot,
   deliveryPoints,
@@ -31,7 +9,6 @@ export default function DeliveryPointsManager({
   onReorderPoint,
   onUpdateDemand,
   onClearAll,
-  onLoadPreset,
   geoStatus,
   onRequestGps
 }) {
@@ -265,32 +242,6 @@ export default function DeliveryPointsManager({
           </div>
         </form>
       )}
-
-      {/* Quick City Presets */}
-      <div>
-        <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>Quick City Presets:</div>
-        <div style={{ display: 'flex', gap: '6px' }}>
-          {['delhi', 'mumbai', 'bengaluru'].map((city) => (
-            <button
-              key={city}
-              onClick={() => onLoadPreset(PRESET_LOCATIONS[city])}
-              style={{
-                flex: 1,
-                padding: '6px',
-                borderRadius: '6px',
-                border: '1px solid #334155',
-                background: '#1e293b',
-                color: '#94a3b8',
-                fontSize: '11px',
-                textTransform: 'capitalize',
-                cursor: 'pointer'
-              }}
-            >
-              {city} ({PRESET_LOCATIONS[city].length})
-            </button>
-          ))}
-        </div>
-      </div>
 
       {/* Delivery Points List */}
       <div style={{ borderTop: '1px solid #334155', paddingTop: '10px' }}>

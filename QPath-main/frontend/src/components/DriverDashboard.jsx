@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Truck, Navigation, CheckCircle2, Clock, AlertTriangle,
   LogOut, MapPin, ExternalLink, RefreshCw, ChevronRight,
-  Shield, Package, AlertCircle, ArrowRight, Check, Sparkles,
-  Layers, Compass, ArrowUpRight, XCircle, X, FileText, RotateCcw, KeyRound
+  Shield, Package, AlertCircle, ArrowRight, Check,
+  Layers, Compass, ArrowUpRight, XCircle, X, FileText, RotateCcw, KeyRound, Building2
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -24,51 +24,50 @@ function RecenterOnDriver({ center, zoom = 13 }) {
 
 // Custom Numbered Marker Icon Builder
 function createStopIcon(label, status) {
-  let bgColor = '#3b82f6';
-  let borderColor = '#93c5fd';
-  let badgeSymbol = '';
+  let bgColor = '#171d28';
+  let borderColor = '#3b82f6';
+  let badgeSymbol = label.replace(/^[dD]/, '');
 
   if (status === 'In Progress') {
-    bgColor = '#f59e0b';
-    borderColor = '#fde68a';
+    bgColor = '#171d28';
+    borderColor = '#f59e0b';
   } else if (status === 'Delivered') {
-    bgColor = '#10b981';
-    borderColor = '#a7f3d0';
+    bgColor = '#059669';
+    borderColor = '#10b981';
     badgeSymbol = '✓';
   } else if (status === 'Failed') {
-    bgColor = '#ef4444';
-    borderColor = '#fca5a5';
+    bgColor = '#dc2626';
+    borderColor = '#ef4444';
     badgeSymbol = '✕';
   }
-
 
   const html = `
     <div style="
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 32px;
-      height: 32px;
+      width: 22px;
+      height: 22px;
       background: ${bgColor};
-      border: 2.5px solid ${borderColor};
+      border: 1.5px solid ${borderColor};
       border-radius: 50%;
       color: #ffffff;
-      font-weight: 800;
-      font-size: 13px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      font-weight: 600;
+      font-size: 11px;
+      font-family: var(--font-sans);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
       cursor: pointer;
-      font-family: sans-serif;
     ">
-      ${badgeSymbol || label}
+      ${badgeSymbol}
     </div>
   `;
 
   return L.divIcon({
     className: 'custom-driver-stop-marker',
     html: html,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-    popupAnchor: [0, -18]
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+    popupAnchor: [0, -12]
   });
 }
 
@@ -78,26 +77,27 @@ function createDepotIcon() {
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 34px;
-      height: 34px;
-      background: #4f46e5;
-      border: 2.5px solid #c7d2fe;
-      border-radius: 8px;
-      color: #ffffff;
-      font-weight: 800;
-      font-size: 15px;
-      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.6);
+      width: 26px;
+      height: 26px;
+      background: #171d28;
+      border: 1.5px solid #3b82f6;
+      border-radius: 4px;
+      color: #60a5fa;
+      font-weight: 700;
+      font-size: 9px;
+      font-family: var(--font-sans);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.5);
       cursor: pointer;
     ">
-      🏢
+      HUB
     </div>
   `;
   return L.divIcon({
     className: 'custom-driver-depot-marker',
     html: html,
-    iconSize: [34, 34],
-    iconAnchor: [17, 17],
-    popupAnchor: [0, -18]
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
+    popupAnchor: [0, -14]
   });
 }
 
@@ -118,99 +118,76 @@ export default function DriverDashboard({ user, onLogout }) {
   const [errorMessage, setErrorMessage] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
 
-  // Failure Modal state
+  // Failure modal state
   const [failModalStop, setFailModalStop] = useState(null);
   const [failReason, setFailReason] = useState('Customer unavailable / Not home');
   const [failCustomNotes, setFailCustomNotes] = useState('');
   const [failingStopId, setFailingStopId] = useState(null);
 
-  // OTP Verification Modal state
-  const [otpModalStop, setOtpModalStop] = useState(null);
-
-  // Return-to-hub confirmation states
+  // Return to hub state
   const [completingReturn, setCompletingReturn] = useState(false);
   const [returnSubmitted, setReturnSubmitted] = useState(false);
   const [releasingDriver, setReleasingDriver] = useState(false);
 
-  // Track previous status to detect when Admin verifies and releases driver
-  const prevJobStatusRef = useRef(null);
+  // OTP Verification modal state
+  const [otpModalStop, setOtpModalStop] = useState(null);
 
-  // Fetch full driver view
+  // Poll driver data from backend
   const fetchDriverData = useCallback(async () => {
     try {
       const res = await getDriverView(driverId);
       const data = res.data;
       setDriverView(data);
 
-      const wasAwaitingVerification =
-        prevJobStatusRef.current === 'Pending Admin Verification' ||
-        prevJobStatusRef.current === 'Returning to Hub' ||
-        returnSubmitted;
-
-      // Detect if Admin just verified and released the driver:
-      // Driver transitioned to 'Available' and has no active job
-      if (wasAwaitingVerification && data.driver?.status === 'Available' && !data.has_active_job) {
-        setReturnSubmitted(false);
-        setActiveTab('jobs');
-        setSuccessMessage('✅ Returned deliverables verified & checked in by Admin. You are now released to claim new jobs!');
-        setTimeout(() => setSuccessMessage(null), 6000);
-      } else if (data.has_active_job && data.current_job?.status !== 'Completed') {
-        // If driver has an active job, automatically switch to route cockpit
+      if (data.active_job) {
         setActiveTab('route');
-      } else if (!data.has_active_job && data.driver?.status === 'Available' && activeTab === 'route' && !data.current_job) {
-        // If driver has no job, is Available, and is currently on route tab, send to jobs page
-        setActiveTab('jobs');
       }
-
-      prevJobStatusRef.current = data.current_job?.status || null;
+      setErrorMessage(null);
     } catch (err) {
-      console.error('Failed to load driver data:', err);
-      setErrorMessage(err.response?.data?.detail || 'Unable to connect to dispatch server.');
+      console.error('Error fetching driver view:', err);
+      setErrorMessage('Failed to connect to Dispatch server. Retrying…');
     } finally {
       setLoading(false);
     }
-  }, [driverId, returnSubmitted, activeTab]);
+  }, [driverId]);
 
   useEffect(() => {
     fetchDriverData();
-    // Poll faster (every 3s) when awaiting admin verification so driver is released immediately
-    const isWaiting = returnSubmitted || driverView?.current_job?.status === 'Pending Admin Verification';
-    const intervalTime = isWaiting ? 3000 : 8000;
-    const interval = setInterval(fetchDriverData, intervalTime);
+    const interval = setInterval(fetchDriverData, 5000);
     return () => clearInterval(interval);
-  }, [fetchDriverData, returnSubmitted, driverView?.current_job?.status]);
+  }, [fetchDriverData]);
 
-  // Handle Accept Job
+  // Handle accepting a job
   const handleAcceptJob = async (jobId) => {
     setAcceptingJobId(jobId);
     setErrorMessage(null);
     try {
-      const gpsPayload = userGps?.lat ? { lat: userGps.lat, lng: userGps.lng } : { lat: 28.6139, lng: 77.2090 };
-      const res = await acceptJob(driverId, jobId, gpsPayload);
-      if (res.data.success) {
-        setSuccessMessage(`Job ${jobId} accepted! QPSO route calculated starting from Central Hub.`);
+      const gps = userGps?.lat ? { lat: userGps.lat, lng: userGps.lng } : { lat: 28.6139, lng: 77.2090 };
+      const res = await acceptJob(driverId, jobId, gps);
+      if (res.data?.success) {
+        setSuccessMessage(`Job ${jobId} accepted! Route optimized.`);
         setTimeout(() => setSuccessMessage(null), 4000);
         await fetchDriverData();
         setActiveTab('route');
       }
     } catch (err) {
       console.error('Error accepting job:', err);
-      setErrorMessage(err.response?.data?.detail || 'Failed to accept job. It may have already been claimed.');
+      setErrorMessage(err.response?.data?.detail || 'Failed to accept job.');
     } finally {
       setAcceptingJobId(null);
     }
   };
 
-  // Handle Complete Delivery
+  // Handle completing a delivery stop
   const handleCompleteDelivery = async (stopId) => {
-    if (!driverView?.current_job) return;
+    if (!driverView?.active_job?.job_id) return;
     setCompletingStopId(stopId);
     setErrorMessage(null);
     try {
-      const gpsPayload = userGps?.lat ? { lat: userGps.lat, lng: userGps.lng } : { lat: 28.6139, lng: 77.2090 };
-      const res = await completeDelivery(driverId, driverView.current_job.job_id, stopId, gpsPayload);
-      if (res.data.success) {
-        setSuccessMessage(`Stop marked as Delivered! Remaining route re-optimized with current traffic.`);
+      const gps = userGps?.lat ? { lat: userGps.lat, lng: userGps.lng } : { lat: 28.6139, lng: 77.2090 };
+      const res = await completeDelivery(driverId, driverView.active_job.job_id, stopId, gps);
+      if (res.data?.success) {
+        setSuccessMessage('Delivery completed. Remaining stops re-optimized.');
         setTimeout(() => setSuccessMessage(null), 4000);
         await fetchDriverData();
       }
@@ -222,200 +199,197 @@ export default function DriverDashboard({ user, onLogout }) {
     }
   };
 
-  // Handle Not Delivered / Failed Delivery
+  // Handle reporting failed delivery
   const handleFailDelivery = async () => {
-    if (!failModalStop || !driverView?.current_job) return;
-    setFailingStopId(failModalStop.id);
+    if (!failModalStop || !driverView?.active_job?.job_id) return;
+    const stopId = failModalStop.id;
+    setFailingStopId(stopId);
     setErrorMessage(null);
-    try {
-      const gpsPayload = userGps?.lat ? { lat: userGps.lat, lng: userGps.lng } : { lat: 28.6139, lng: 77.2090 };
-      const fullReason = (failReason === 'Other' && failCustomNotes.trim())
-        ? `Other: ${failCustomNotes.trim()}`
-        : (failCustomNotes.trim() ? `${failReason} - ${failCustomNotes.trim()}` : failReason);
 
-      const res = await failDelivery(driverId, driverView.current_job.job_id, failModalStop.id, fullReason, gpsPayload);
-      if (res.data.success) {
-        setSuccessMessage(`Delivery marked as Not Delivered: "${fullReason}". Route re-optimized.`);
-        setTimeout(() => setSuccessMessage(null), 5000);
+    const fullReason = failCustomNotes.trim()
+      ? `${failReason}: ${failCustomNotes.trim()}`
+      : failReason;
+
+    try {
+      const gps = userGps?.lat ? { lat: userGps.lat, lng: userGps.lng } : { lat: 28.6139, lng: 77.2090 };
+      const res = await failDelivery(driverId, driverView.active_job.job_id, stopId, fullReason, gps);
+      if (res.data?.success) {
+        setSuccessMessage(`Logged as Undelivered: ${fullReason}. Route re-optimized.`);
+        setTimeout(() => setSuccessMessage(null), 4000);
         setFailModalStop(null);
         setFailCustomNotes('');
         await fetchDriverData();
       }
     } catch (err) {
-      console.error('Error reporting failed delivery:', err);
-      setErrorMessage(err.response?.data?.detail || 'Failed to update delivery status.');
+      console.error('Error recording failed delivery:', err);
+      setErrorMessage(err.response?.data?.detail || 'Failed to record exception.');
     } finally {
       setFailingStopId(null);
     }
   };
 
-  // Handle driver confirming arrival at hub with undelivered items
+  // Handle return to hub
   const handleCompleteReturn = async () => {
-    if (!driverView?.current_job) return;
+    if (!driverView?.active_job?.job_id) return;
     setCompletingReturn(true);
     setErrorMessage(null);
     try {
-      const gpsPayload = userGps?.lat ? { lat: userGps.lat, lng: userGps.lng } : { lat: 28.6139, lng: 77.2090 };
-      const res = await completeReturnToHub(driverId, driverView.current_job.job_id, gpsPayload);
-      if (res.data.success) {
+      const gps = userGps?.lat ? { lat: userGps.lat, lng: userGps.lng } : { lat: 28.6139, lng: 77.2090 };
+      const res = await completeReturnToHub(driverId, driverView.active_job.job_id, gps);
+      if (res.data?.success) {
         setReturnSubmitted(true);
-        setSuccessMessage('Hub return confirmed. Awaiting admin verification of undelivered items.');
-        setTimeout(() => setSuccessMessage(null), 6000);
+        setSuccessMessage('Arrived at Central Hub. Awaiting Admin check-in.');
         await fetchDriverData();
       }
     } catch (err) {
-      console.error('Error confirming hub return:', err);
-      setErrorMessage(err.response?.data?.detail || 'Failed to confirm hub return.');
+      console.error('Error completing return:', err);
+      setErrorMessage(err.response?.data?.detail || 'Failed to submit hub arrival.');
     } finally {
       setCompletingReturn(false);
     }
   };
 
-  // Handle claiming another job: release driver on backend, sync admin dashboard, and switch to available jobs
+  // Handle claiming another job
   const handleClaimAnotherJob = async () => {
     setReleasingDriver(true);
-    setErrorMessage(null);
     try {
       await releaseDriver(driverId);
-      setReturnSubmitted(false);
       await fetchDriverData();
       setActiveTab('jobs');
-      setSuccessMessage('You have been released and are now available to claim a new job.');
-      setTimeout(() => setSuccessMessage(null), 4000);
     } catch (err) {
       console.error('Error releasing driver:', err);
       setActiveTab('jobs');
-      await fetchDriverData();
     } finally {
       setReleasingDriver(false);
     }
   };
 
-  const currentJob = driverView?.current_job;
-  const activeRoute = currentJob?.route;
   const availableJobs = driverView?.available_jobs || [];
+  const currentJob = driverView?.active_job;
+  const activeRoute = driverView?.active_route;
+  const googleMapsUrl = driverView?.google_maps_url;
+  const isReturningToHub = driverView?.is_returning_to_hub;
+
+  // Stops and metrics
   const stops = currentJob?.delivery_points || [];
-  const pendingStops = stops.filter(s => s.status === 'Pending' || s.status === 'In Progress');
+  const remainingStops = stops.filter(s => s.status !== 'Delivered' && s.status !== 'Failed');
   const deliveredStops = stops.filter(s => s.status === 'Delivered');
   const failedStops = stops.filter(s => s.status === 'Failed');
-  const remainingStops = pendingStops;
-  const isReturningToHub = Boolean(activeRoute?.returning_to_hub || (pendingStops.length === 0 && failedStops.length > 0));
+  const nextStop = remainingStops[0] || null;
 
-  // Next stop calculation
-  const nextStop = isReturningToHub
-    ? { name: 'Central Distribution Hub (Depot)', label: 'HUB', lat: 28.6139, lng: 77.2090 }
-    : (activeRoute?.stats?.next_stop || remainingStops[0] || null);
-
-
-  // Polyline for map — normalize to [[lat, lng], ...] for Leaflet compatibility
-  const polylineCoords = (activeRoute?.polyline || []).map(p =>
-    Array.isArray(p) ? [p[0], p[1]] : [p.lat, p.lng]
-  );
-
-
-  // Center position for map
+  // Polyline coords for map
+  const polylineCoords = activeRoute?.path_coords?.map(p => [p.lat, p.lng]) || [];
   const mapCenter = userGps?.lat
     ? [userGps.lat, userGps.lng]
-    : nextStop
-      ? [nextStop.lat, nextStop.lng]
+    : currentJob?.depot?.lat
+      ? [currentJob.depot.lat, currentJob.depot.lng]
       : [28.6139, 77.2090];
-
-  const googleMapsUrl = activeRoute?.google_maps_url || '';
 
   return (
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      minHeight: '100vh',
-      backgroundColor: '#090d16',
-      color: '#f1f5f9',
-      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+      height: '100vh',
+      backgroundColor: 'var(--bg-canvas, #0f141c)',
+      color: 'var(--text-primary, #f8fafc)',
+      fontFamily: 'var(--font-sans)',
+      overflow: 'hidden'
     }}>
       {/* ── Driver Header ── */}
       <header style={{
-        backgroundColor: '#111827',
-        borderBottom: '1px solid #1f2937',
-        padding: '12px 24px',
+        backgroundColor: 'var(--bg-surface, #171d28)',
+        borderBottom: '1px solid var(--border-subtle, #242e3f)',
+        padding: '8px 16px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
-        zIndex: 1000
+        zIndex: 100,
+        flexShrink: 0
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: '42px',
-            height: '42px',
-            borderRadius: '10px',
-            background: 'linear-gradient(135deg, #0d9488, #06b6d4)',
+            width: '24px',
+            height: '24px',
+            borderRadius: '4px',
+            background: 'var(--color-primary, #2563eb)',
             color: '#ffffff',
-            boxShadow: '0 4px 12px rgba(13, 148, 136, 0.35)'
+            fontWeight: 700,
+            fontSize: '13px'
           }}>
-            <Truck size={22} />
+            Q
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '18px', fontWeight: '700', color: '#f8fafc' }}>
-                Driver Portal
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary, #f8fafc)' }}>
+                QPath
               </span>
               <span style={{
-                fontSize: '11px',
-                fontWeight: '600',
-                padding: '2px 8px',
-                borderRadius: '999px',
-                backgroundColor: 'rgba(14, 165, 233, 0.15)',
-                color: '#38bdf8',
-                border: '1px solid rgba(14, 165, 233, 0.3)'
+                fontSize: '10px',
+                fontWeight: 500,
+                padding: '1px 5px',
+                borderRadius: '3px',
+                backgroundColor: 'var(--border-strong, #334158)',
+                color: 'var(--text-secondary, #94a3b8)'
+              }}>
+                Driver cockpit
+              </span>
+              <span style={{
+                fontSize: '10px',
+                fontWeight: 500,
+                padding: '1px 5px',
+                borderRadius: '3px',
+                backgroundColor: 'var(--color-primary-subtle, rgba(37, 99, 235, 0.12))',
+                color: '#60a5fa'
               }}>
                 {assignedVehicle}
               </span>
             </div>
-            <div style={{ fontSize: '12px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span>Operator: <strong>{driverName}</strong> ({driverId})</span>
-              <span>•</span>
-              <span style={{ color: driverView?.driver?.status === 'En Route' ? '#38bdf8' : '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{
-                  width: '6px', height: '6px', borderRadius: '50%',
-                  backgroundColor: driverView?.driver?.status === 'En Route' ? '#38bdf8' : '#10b981',
-                  display: 'inline-block'
-                }} />
-                Status: {driverView?.driver?.status || 'Available'}
+            <div style={{ fontSize: '11px', color: 'var(--text-muted, #64748b)', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '1px' }}>
+              <span>Operator: <strong style={{ color: 'var(--text-secondary, #94a3b8)' }}>{driverName}</strong> ({driverId})</span>
+              <span>·</span>
+              <span style={{
+                color: driverView?.driver?.status === 'En Route' ? '#60a5fa' : 'var(--color-success, #10b981)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '11px'
+              }}>
+                ● {driverView?.driver?.status || 'Available'}
               </span>
             </div>
           </div>
         </div>
 
         {/* View Navigation Tabs & Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{
             display: 'flex',
-            backgroundColor: '#0f172a',
-            borderRadius: '8px',
-            padding: '3px',
-            border: '1px solid #334155'
+            backgroundColor: 'var(--bg-canvas, #0f141c)',
+            borderRadius: '4px',
+            padding: '2px',
+            border: '1px solid var(--border-subtle, #242e3f)'
           }}>
             <button
               onClick={() => setActiveTab('jobs')}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                padding: '6px 12px',
-                borderRadius: '6px',
+                gap: '5px',
+                padding: '5px 10px',
+                borderRadius: '3px',
                 border: 'none',
-                backgroundColor: activeTab === 'jobs' ? '#2563eb' : 'transparent',
-                color: activeTab === 'jobs' ? '#ffffff' : '#94a3b8',
-                fontSize: '12px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
+                backgroundColor: activeTab === 'jobs' ? 'var(--bg-surface, #171d28)' : 'transparent',
+                color: activeTab === 'jobs' ? 'var(--text-primary, #f8fafc)' : 'var(--text-muted, #64748b)',
+                fontSize: '11px',
+                fontWeight: activeTab === 'jobs' ? 600 : 500,
+                cursor: 'pointer'
               }}
             >
-              <Package size={14} />
-              <span>Available Jobs ({availableJobs.length})</span>
+              <Package size={13} />
+              <span>Available jobs ({availableJobs.length})</span>
             </button>
 
             <button
@@ -424,24 +398,23 @@ export default function DriverDashboard({ user, onLogout }) {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                padding: '6px 12px',
-                borderRadius: '6px',
+                gap: '5px',
+                padding: '5px 10px',
+                borderRadius: '3px',
                 border: 'none',
-                backgroundColor: activeTab === 'route' ? '#0d9488' : 'transparent',
-                color: activeTab === 'route' ? '#ffffff' : currentJob ? '#94a3b8' : '#475569',
-                fontSize: '12px',
-                fontWeight: '600',
-                cursor: currentJob ? 'pointer' : 'not-allowed',
-                transition: 'all 0.15s ease'
+                backgroundColor: activeTab === 'route' ? 'var(--bg-surface, #171d28)' : 'transparent',
+                color: activeTab === 'route' ? 'var(--text-primary, #f8fafc)' : currentJob ? 'var(--text-muted, #64748b)' : 'var(--border-strong, #334158)',
+                fontSize: '11px',
+                fontWeight: activeTab === 'route' ? 600 : 500,
+                cursor: currentJob ? 'pointer' : 'not-allowed'
               }}
             >
-              <Navigation size={14} />
-              <span>Active Route Cockpit</span>
+              <Navigation size={13} />
+              <span>Active route</span>
               {currentJob && currentJob.status !== 'Completed' && (
                 <span style={{
-                  width: '6px', height: '6px', borderRadius: '50%',
-                  backgroundColor: '#38bdf8', display: 'inline-block'
+                  width: '5px', height: '5px', borderRadius: '50%',
+                  backgroundColor: '#60a5fa', display: 'inline-block'
                 }} />
               )}
             </button>
@@ -449,21 +422,21 @@ export default function DriverDashboard({ user, onLogout }) {
 
           <button
             onClick={fetchDriverData}
-            title="Refresh Dispatch State"
+            title="Refresh dispatch feed"
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: '36px',
-              height: '36px',
-              borderRadius: '8px',
-              backgroundColor: '#1f2937',
-              border: '1px solid #374151',
-              color: '#94a3b8',
+              width: '28px',
+              height: '28px',
+              borderRadius: '4px',
+              backgroundColor: 'var(--bg-canvas, #0f141c)',
+              border: '1px solid var(--border-subtle, #242e3f)',
+              color: 'var(--text-secondary, #94a3b8)',
               cursor: 'pointer'
             }}
           >
-            <RefreshCw size={15} />
+            <RefreshCw size={13} />
           </button>
 
           <button
@@ -471,19 +444,19 @@ export default function DriverDashboard({ user, onLogout }) {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              padding: '7px 12px',
-              borderRadius: '8px',
-              backgroundColor: '#374151',
-              border: '1px solid #4b5563',
-              color: '#e5e7eb',
-              fontSize: '12px',
-              fontWeight: '500',
+              gap: '4px',
+              padding: '5px 10px',
+              borderRadius: '4px',
+              backgroundColor: 'transparent',
+              border: '1px solid var(--border-subtle, #242e3f)',
+              color: 'var(--text-secondary, #94a3b8)',
+              fontSize: '11px',
+              fontWeight: 500,
               cursor: 'pointer'
             }}
           >
-            <LogOut size={14} />
-            <span>Sign Out</span>
+            <LogOut size={12} />
+            <span>Sign out</span>
           </button>
         </div>
       </header>
@@ -491,74 +464,74 @@ export default function DriverDashboard({ user, onLogout }) {
       {/* ── Alerts ── */}
       {errorMessage && (
         <div style={{
-          margin: '12px 24px 0 24px',
-          padding: '10px 14px',
-          backgroundColor: 'rgba(239, 68, 68, 0.12)',
+          margin: '10px 16px 0 16px',
+          padding: '8px 12px',
+          backgroundColor: 'var(--color-danger-subtle, rgba(239, 68, 68, 0.12))',
           border: '1px solid rgba(239, 68, 68, 0.3)',
-          borderRadius: '8px',
-          color: '#f87171',
-          fontSize: '13px',
+          borderRadius: '4px',
+          color: 'var(--color-danger, #ef4444)',
+          fontSize: '12px',
           display: 'flex',
           alignItems: 'center',
           gap: '8px'
         }}>
-          <AlertCircle size={16} />
+          <AlertCircle size={14} />
           <span>{errorMessage}</span>
         </div>
       )}
 
       {successMessage && (
         <div style={{
-          margin: '12px 24px 0 24px',
-          padding: '10px 14px',
-          backgroundColor: 'rgba(16, 185, 129, 0.12)',
+          margin: '10px 16px 0 16px',
+          padding: '8px 12px',
+          backgroundColor: 'var(--color-success-subtle, rgba(16, 185, 129, 0.12))',
           border: '1px solid rgba(16, 185, 129, 0.3)',
-          borderRadius: '8px',
-          color: '#34d399',
-          fontSize: '13px',
+          borderRadius: '4px',
+          color: 'var(--color-success, #10b981)',
+          fontSize: '12px',
           display: 'flex',
           alignItems: 'center',
           gap: '8px'
         }}>
-          <CheckCircle2 size={16} />
+          <CheckCircle2 size={14} />
           <span>{successMessage}</span>
         </div>
       )}
 
       {/* ── TAB 1: AVAILABLE DELIVERY JOBS ── */}
       {activeTab === 'jobs' && (
-        <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
-          <div style={{ marginBottom: '20px' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#f8fafc', margin: '0 0 4px 0' }}>
-              Available Delivery Jobs
+        <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto', width: '100%', boxSizing: 'border-box', overflowY: 'auto' }}>
+          <div style={{ marginBottom: '16px' }}>
+            <h2 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary, #f1f5f9)', margin: '0 0 2px 0' }}>
+              Dispatch Jobs Pool
             </h2>
-            <p style={{ fontSize: '13px', color: '#94a3b8', margin: 0 }}>
-              Select a delivery batch to accept. Route will immediately optimize from your current GPS position via QPSO.
+            <p style={{ fontSize: '11px', color: 'var(--text-muted, #64748b)', margin: 0 }}>
+              Select a batch to accept. Route immediately calculates from your live GPS position using QPSO.
             </p>
           </div>
 
           {availableJobs.length === 0 ? (
             <div style={{
-              backgroundColor: '#111827',
-              borderRadius: '12px',
-              border: '1px solid #1f2937',
-              padding: '60px 20px',
+              backgroundColor: 'var(--bg-surface, #171d28)',
+              borderRadius: '6px',
+              border: '1px solid var(--border-subtle, #242e3f)',
+              padding: '48px 20px',
               textAlign: 'center',
-              color: '#64748b'
+              color: 'var(--text-muted, #64748b)'
             }}>
-              <Package size={48} style={{ margin: '0 auto 12px auto', opacity: 0.4 }} />
-              <div style={{ fontSize: '16px', fontWeight: '600', color: '#e2e8f0', marginBottom: '6px' }}>
-                No Available Jobs at the Moment
+              <Package size={36} style={{ margin: '0 auto 10px auto', opacity: 0.4 }} />
+              <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary, #f1f5f9)', marginBottom: '4px' }}>
+                No Available Batches in Pool
               </div>
-              <div style={{ fontSize: '13px' }}>
-                All delivery batches have been accepted by drivers. Check back shortly or request Admin to publish new routes.
+              <div style={{ fontSize: '12px' }}>
+                All delivery batches are currently assigned. Check back shortly or request Admin to publish new routes.
               </div>
             </div>
           ) : (
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
-              gap: '18px'
+              gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
+              gap: '14px'
             }}>
               {availableJobs.map((job) => {
                 const isAccepting = acceptingJobId === job.job_id;
@@ -566,49 +539,49 @@ export default function DriverDashboard({ user, onLogout }) {
                   <div
                     key={job.job_id}
                     style={{
-                      backgroundColor: '#111827',
-                      borderRadius: '12px',
-                      border: '1px solid #1f2937',
-                      padding: '20px',
+                      backgroundColor: 'var(--bg-surface, #171d28)',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-subtle, #242e3f)',
+                      padding: '16px',
                       display: 'flex',
-                      flexDirection: 'column',
-                      boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
-                      transition: 'transform 0.15s ease, border-color 0.15s ease'
+                      flexDirection: 'column'
                     }}
                   >
                     {/* Card Header: Job ID & Priority */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span style={{
-                          backgroundColor: '#1e293b',
-                          color: '#38bdf8',
-                          padding: '3px 8px',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                          fontWeight: '700',
-                          border: '1px solid #334155'
+                          backgroundColor: 'var(--bg-canvas, #0f141c)',
+                          color: '#60a5fa',
+                          padding: '2px 6px',
+                          borderRadius: '3px',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          fontFamily: 'var(--font-mono)',
+                          border: '1px solid var(--border-subtle, #242e3f)'
                         }}>
                           {job.job_id}
                         </span>
-                        <span style={{ fontSize: '11px', color: '#64748b' }}>
+                        <span style={{ fontSize: '10px', color: 'var(--text-muted, #64748b)', fontFamily: 'var(--font-mono)' }}>
                           {job.created_at}
                         </span>
                       </div>
                       <span style={{
-                        fontSize: '11px',
-                        fontWeight: '700',
-                        padding: '2px 8px',
-                        borderRadius: '999px',
-                        backgroundColor: job.priority === 'High Priority' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(59, 130, 246, 0.15)',
-                        color: job.priority === 'High Priority' ? '#f87171' : '#60a5fa',
-                        border: `1px solid ${job.priority === 'High Priority' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`
+                        fontSize: '10px',
+                        fontWeight: 600,
+                        padding: '1px 6px',
+                        borderRadius: '3px',
+                        fontFamily: 'var(--font-mono)',
+                        backgroundColor: job.priority === 'High Priority' ? 'var(--color-danger-subtle, rgba(239, 68, 68, 0.12))' : 'var(--color-primary-subtle, rgba(37, 99, 235, 0.12))',
+                        color: job.priority === 'High Priority' ? 'var(--color-danger, #ef4444)' : 'var(--color-primary, #2563eb)',
+                        border: `1px solid ${job.priority === 'High Priority' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(37, 99, 235, 0.3)'}`
                       }}>
                         {job.priority}
                       </span>
                     </div>
 
                     {/* Job Title */}
-                    <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#f8fafc', margin: '0 0 12px 0' }}>
+                    <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary, #f1f5f9)', margin: '0 0 10px 0' }}>
                       {job.title}
                     </h3>
 
@@ -616,87 +589,72 @@ export default function DriverDashboard({ user, onLogout }) {
                     <div style={{
                       display: 'grid',
                       gridTemplateColumns: 'repeat(3, 1fr)',
-                      gap: '8px',
-                      backgroundColor: '#0b1120',
-                      borderRadius: '8px',
-                      padding: '10px',
-                      marginBottom: '14px',
-                      border: '1px solid #1e293b'
+                      gap: '6px',
+                      backgroundColor: 'var(--bg-canvas, #0f141c)',
+                      borderRadius: '4px',
+                      padding: '8px',
+                      marginBottom: '12px',
+                      border: '1px solid var(--border-subtle, #242e3f)'
                     }}>
                       <div>
-                        <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '600' }}>STOPS</div>
-                        <div style={{ fontSize: '15px', fontWeight: '700', color: '#f8fafc' }}>
+                        <div style={{ fontSize: '9px', color: 'var(--text-muted, #64748b)', fontWeight: 600 }}>Stops</div>
+                        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary, #f8fafc)', fontFamily: 'var(--font-mono)' }}>
                           {job.num_deliveries}
                         </div>
                       </div>
                       <div>
-                        <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '600' }}>DISTANCE</div>
-                        <div style={{ fontSize: '15px', fontWeight: '700', color: '#38bdf8' }}>
+                        <div style={{ fontSize: '9px', color: 'var(--text-muted, #64748b)', fontWeight: 600 }}>Distance</div>
+                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#60a5fa', fontFamily: 'var(--font-mono)' }}>
                           {job.total_distance_km} km
                         </div>
                       </div>
                       <div>
-                        <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '600' }}>EST. TIME</div>
-                        <div style={{ fontSize: '15px', fontWeight: '700', color: '#a78bfa' }}>
+                        <div style={{ fontSize: '9px', color: 'var(--text-muted, #64748b)', fontWeight: 600 }}>Est. time</div>
+                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#a78bfa', fontFamily: 'var(--font-mono)' }}>
                           {Math.round(job.estimated_time_min)} min
                         </div>
                       </div>
                     </div>
 
-                    {/* Traffic condition */}
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      fontSize: '12px',
-                      color: job.traffic_color || '#10b981',
-                      marginBottom: '14px'
-                    }}>
-                      <span style={{
-                        width: '7px', height: '7px', borderRadius: '50%',
-                        backgroundColor: job.traffic_color || '#10b981'
-                      }} />
-                      <span>Traffic: <strong>{job.traffic_condition}</strong></span>
-                    </div>
-
-                    {/* List of Delivery Destinations */}
-                    <div style={{ flex: 1, marginBottom: '16px' }}>
-                      <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600', marginBottom: '6px', textTransform: 'uppercase' }}>
-                        Delivery Locations:
+                    {/* Delivery Destinations */}
+                    <div style={{ flex: 1, marginBottom: '14px' }}>
+                      <div style={{ fontSize: '10px', color: 'var(--text-muted, #64748b)', fontWeight: 600, marginBottom: '4px' }}>
+                        Delivery destinations:
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         {job.delivery_points.map((pt, pIdx) => (
                           <div
                             key={pt.id || pIdx}
                             style={{
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '8px',
-                              fontSize: '12px',
-                              backgroundColor: 'rgba(30, 41, 59, 0.5)',
-                              padding: '6px 10px',
-                              borderRadius: '6px',
-                              border: '1px solid rgba(255, 255, 255, 0.04)'
+                              gap: '6px',
+                              fontSize: '11px',
+                              backgroundColor: 'var(--bg-canvas, #0f141c)',
+                              padding: '5px 8px',
+                              borderRadius: '3px',
+                              border: '1px solid var(--border-subtle, #242e3f)'
                             }}
                           >
                             <span style={{
                               display: 'inline-flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              width: '20px',
-                              height: '20px',
-                              borderRadius: '50%',
-                              backgroundColor: '#2563eb',
+                              width: '18px',
+                              height: '18px',
+                              borderRadius: '3px',
+                              backgroundColor: 'var(--color-primary, #2563eb)',
                               color: '#ffffff',
-                              fontSize: '10px',
-                              fontWeight: '700'
+                              fontSize: '9px',
+                              fontWeight: 700,
+                              fontFamily: 'var(--font-mono)'
                             }}>
                               {pt.label || `D${pIdx+1}`}
                             </span>
-                            <span style={{ flex: 1, color: '#e2e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <span style={{ flex: 1, color: 'var(--text-secondary, #94a3b8)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {pt.name}
                             </span>
-                            <span style={{ color: '#64748b', fontSize: '11px' }}>
+                            <span style={{ color: 'var(--text-muted, #64748b)', fontSize: '10px', fontFamily: 'var(--font-mono)' }}>
                               {pt.demand}kg
                             </span>
                           </div>
@@ -714,28 +672,20 @@ export default function DriverDashboard({ user, onLogout }) {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '8px',
-                        padding: '11px 16px',
-                        backgroundColor: '#2563eb',
+                        gap: '6px',
+                        padding: '9px 14px',
+                        backgroundColor: 'var(--color-primary, #2563eb)',
                         color: '#ffffff',
                         border: 'none',
-                        borderRadius: '8px',
-                        fontSize: '13px',
-                        fontWeight: '700',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        fontWeight: 600,
                         cursor: isAccepting ? 'not-allowed' : 'pointer',
-                        opacity: isAccepting ? 0.7 : 1,
-                        boxShadow: '0 4px 12px rgba(37, 99, 235, 0.35)',
-                        transition: 'background-color 0.15s'
+                        opacity: isAccepting ? 0.7 : 1
                       }}
                     >
-                      {isAccepting ? (
-                        <span>Calculating Optimal Route…</span>
-                      ) : (
-                        <>
-                          <span>Accept Job & Start Routing</span>
-                          <ArrowRight size={15} />
-                        </>
-                      )}
+                      <span>{isAccepting ? 'Optimizing Trajectory…' : 'Accept Job & Start Routing'}</span>
+                      <ArrowRight size={14} />
                     </button>
                   </div>
                 );
@@ -750,37 +700,37 @@ export default function DriverDashboard({ user, onLogout }) {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           {/* Top Live Progress KPI Bar */}
           <div style={{
-            backgroundColor: '#0f172a',
-            borderBottom: '1px solid #1e293b',
-            padding: '10px 24px',
+            backgroundColor: 'var(--bg-surface, #171d28)',
+            borderBottom: '1px solid var(--border-subtle, #242e3f)',
+            padding: '8px 16px',
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-            gap: '12px'
+            gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+            gap: '8px'
           }}>
-            <div style={{ backgroundColor: '#1e293b', borderRadius: '8px', padding: '10px 14px', border: '1px solid #334155' }}>
-              <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '600' }}>ACTIVE JOB</div>
-              <div style={{ fontSize: '16px', fontWeight: '700', color: '#38bdf8', marginTop: '2px' }}>
-                {currentJob?.job_id || 'No Job Active'}
+            <div style={{ backgroundColor: 'var(--bg-canvas, #0f141c)', borderRadius: '4px', padding: '8px 10px', border: '1px solid var(--border-subtle, #242e3f)' }}>
+              <div style={{ fontSize: '9px', color: 'var(--text-muted, #64748b)', fontWeight: 600 }}>Active job</div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#60a5fa', fontFamily: 'var(--font-mono)' }}>
+                {currentJob?.job_id || 'No job active'}
               </div>
             </div>
 
-            <div style={{ backgroundColor: '#1e293b', borderRadius: '8px', padding: '10px 14px', border: '1px solid #334155' }}>
-              <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '600' }}>COMPLETION PROGRESS</div>
-              <div style={{ fontSize: '16px', fontWeight: '700', color: '#10b981', marginTop: '2px' }}>
-                {deliveredStops.length} / {stops.length} Stops Delivered
+            <div style={{ backgroundColor: 'var(--bg-canvas, #0f141c)', borderRadius: '4px', padding: '8px 10px', border: '1px solid var(--border-subtle, #242e3f)' }}>
+              <div style={{ fontSize: '9px', color: 'var(--text-muted, #64748b)', fontWeight: 600 }}>Delivery progress</div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-success, #10b981)', fontFamily: 'var(--font-mono)' }}>
+                {deliveredStops.length} / {stops.length} stops delivered
               </div>
             </div>
 
-            <div style={{ backgroundColor: '#1e293b', borderRadius: '8px', padding: '10px 14px', border: '1px solid #334155' }}>
-              <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '600' }}>REMAINING DISTANCE</div>
-              <div style={{ fontSize: '16px', fontWeight: '700', color: '#f8fafc', marginTop: '2px' }}>
+            <div style={{ backgroundColor: 'var(--bg-canvas, #0f141c)', borderRadius: '4px', padding: '8px 10px', border: '1px solid var(--border-subtle, #242e3f)' }}>
+              <div style={{ fontSize: '9px', color: 'var(--text-muted, #64748b)', fontWeight: 600 }}>Remaining distance</div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary, #f8fafc)', fontFamily: 'var(--font-mono)' }}>
                 {activeRoute?.total_distance_km ? `${activeRoute.total_distance_km.toFixed(1)} km` : '0 km'}
               </div>
             </div>
 
-            <div style={{ backgroundColor: '#1e293b', borderRadius: '8px', padding: '10px 14px', border: '1px solid #334155' }}>
-              <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '600' }}>REMAINING TIME (TRAFFIC-AWARE)</div>
-              <div style={{ fontSize: '16px', fontWeight: '700', color: '#a78bfa', marginTop: '2px' }}>
+            <div style={{ backgroundColor: 'var(--bg-canvas, #0f141c)', borderRadius: '4px', padding: '8px 10px', border: '1px solid var(--border-subtle, #242e3f)' }}>
+              <div style={{ fontSize: '9px', color: 'var(--text-muted, #64748b)', fontWeight: 600 }}>Est. remaining time</div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#a78bfa', fontFamily: 'var(--font-mono)' }}>
                 {activeRoute?.total_time_min ? `${Math.round(activeRoute.total_time_min)} min` : '0 min'}
               </div>
             </div>
@@ -789,30 +739,28 @@ export default function DriverDashboard({ user, onLogout }) {
           {/* Optimized Delivery Sequence Banner */}
           {activeRoute?.sequence_str && (
             <div style={{
-              backgroundColor: '#131d31',
-              borderBottom: '1px solid #1f2937',
-              padding: '8px 24px',
+              backgroundColor: 'var(--bg-canvas, #0f141c)',
+              borderBottom: '1px solid var(--border-subtle, #242e3f)',
+              padding: '6px 16px',
               display: 'flex',
               alignItems: 'center',
-              gap: '12px',
-              fontSize: '12px'
+              gap: '10px',
+              fontSize: '11px'
             }}>
-              <span style={{ color: '#38bdf8', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <Compass size={14} />
-                QPSO Optimal Sequence:
+              <span style={{ color: '#60a5fa', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Compass size={13} />
+                QPSO sequence:
               </span>
               <span style={{
-                color: '#f8fafc',
-                fontFamily: 'monospace',
-                backgroundColor: 'rgba(0,0,0,0.3)',
-                padding: '3px 8px',
-                borderRadius: '4px'
+                color: 'var(--text-primary, #f8fafc)',
+                fontFamily: 'var(--font-mono)',
+                fontSize: '10px'
               }}>
-                Driver GPS ➔ {activeRoute.sequence_str}
+                GPS Fix ➔ {activeRoute.sequence_str}
               </span>
-              <span style={{ marginLeft: 'auto', color: activeRoute.traffic_color || '#10b981', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: activeRoute.traffic_color || '#10b981' }} />
-                {activeRoute.traffic_condition || 'Low Traffic'}
+              <span style={{ marginLeft: 'auto', color: activeRoute.traffic_color || 'var(--color-success, #10b981)', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontFamily: 'var(--font-mono)' }}>
+                <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: activeRoute.traffic_color || 'var(--color-success, #10b981)' }} />
+                {activeRoute.traffic_condition || 'Free Flow'}
               </span>
             </div>
           )}
@@ -821,81 +769,45 @@ export default function DriverDashboard({ user, onLogout }) {
           <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
             {/* Left: Stop Cards */}
             <div style={{
-              width: '430px',
-              backgroundColor: '#111827',
-              borderRight: '1px solid #1f2937',
+              width: '420px',
+              backgroundColor: 'var(--bg-surface, #171d28)',
+              borderRight: '1px solid var(--border-subtle, #242e3f)',
               display: 'flex',
               flexDirection: 'column',
               height: '100%',
               overflowY: 'auto'
             }}>
-              {/* Return to Hub Banner when undelivered items need return */}
+              {/* Return to Hub Banner */}
               {isReturningToHub && (
                 <div style={{
-                  margin: '14px',
-                  padding: '18px 16px',
-                  backgroundColor: 'rgba(139, 92, 246, 0.14)',
-                  border: '1.5px solid rgba(139, 92, 246, 0.45)',
-                  borderRadius: '12px',
+                  margin: '12px',
+                  padding: '14px',
+                  backgroundColor: 'rgba(139, 92, 246, 0.08)',
+                  border: '1px solid rgba(139, 92, 246, 0.35)',
+                  borderRadius: '6px',
                   textAlign: 'center'
                 }}>
-                  <div style={{
-                    width: '42px',
-                    height: '42px',
-                    borderRadius: '50%',
-                    backgroundColor: '#8b5cf6',
-                    color: '#fff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 10px auto',
-                    fontSize: '20px'
-                  }}>
-                    🏢
-                  </div>
-                  <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#c4b5fd', margin: '0 0 4px 0' }}>
-                    Final Leg: Return to Central Hub
+                  <Building2 size={24} style={{ color: '#a78bfa', margin: '0 auto 6px auto' }} />
+                  <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#c4b5fd', margin: '0 0 2px 0' }}>
+                    Return to Central Hub Required
                   </h3>
-                  <p style={{ fontSize: '12px', color: '#cbd5e1', margin: '0 0 12px 0' }}>
-                    Deliveries completed. <strong>{failedStops.length} undelivered item(s)</strong> must be returned to Central Hub.
+                  <p style={{ fontSize: '11px', color: 'var(--text-secondary, #94a3b8)', margin: '0 0 10px 0' }}>
+                    Deliveries finished. <strong>{failedStops.length} undelivered parcel(s)</strong> must be returned for admin check-in.
                   </p>
-                   {googleMapsUrl && !returnSubmitted && (
-                    <a
-                      href={googleMapsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        padding: '8px 16px',
-                        backgroundColor: '#8b5cf6',
-                        color: '#ffffff',
-                        textDecoration: 'none',
-                        borderRadius: '8px',
-                        fontSize: '12px',
-                        fontWeight: '700'
-                      }}
-                    >
-                      <Navigation size={13} />
-                      <span>Navigate Back to Hub</span>
-                      <ExternalLink size={12} />
-                    </a>
-                  )}
 
                   {/* Confirm Arrived / Pending Verification */}
-                  <div style={{ marginTop: '12px' }}>
+                  <div>
                     {returnSubmitted || currentJob?.status === 'Pending Admin Verification' ? (
                       <div style={{
-                        display: 'flex', alignItems: 'center', gap: '8px',
-                        padding: '10px 14px',
-                        backgroundColor: 'rgba(245, 158, 11, 0.12)',
-                        border: '1px solid rgba(245, 158, 11, 0.35)',
-                        borderRadius: '8px',
-                        fontSize: '12px', color: '#fbbf24', fontWeight: '600'
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                        padding: '8px 12px',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        border: '1px solid rgba(245, 158, 11, 0.3)',
+                        borderRadius: '4px',
+                        fontSize: '11px', color: '#fbbf24', fontWeight: 600
                       }}>
-                        <span>⏳</span>
-                        <span>Arrived at Hub — Awaiting Admin Verification of returned items</span>
+                        <Clock size={13} />
+                        <span>Arrived at Hub — Awaiting Admin Verification</span>
                       </div>
                     ) : (
                       <button
@@ -903,122 +815,92 @@ export default function DriverDashboard({ user, onLogout }) {
                         disabled={completingReturn}
                         style={{
                           width: '100%',
-                          padding: '10px 16px',
-                          backgroundColor: completingReturn ? '#334155' : '#059669',
+                          padding: '8px 14px',
+                          backgroundColor: completingReturn ? 'var(--border-strong, #334158)' : 'var(--color-primary, #2563eb)',
                           color: '#ffffff',
                           border: 'none',
-                          borderRadius: '8px',
-                          fontSize: '13px',
-                          fontWeight: '700',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          fontWeight: 600,
                           cursor: completingReturn ? 'not-allowed' : 'pointer',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          gap: '8px',
-                          transition: 'background-color 0.2s'
+                          gap: '6px'
                         }}
                       >
-                        <CheckCircle2 size={16} />
-                        {completingReturn ? 'Submitting...' : '✓ Confirm Arrived at Hub'}
+                        <CheckCircle2 size={14} />
+                        <span>{completingReturn ? 'Submitting Arrival...' : 'Confirm Arrived at Hub'}</span>
                       </button>
                     )}
                   </div>
                 </div>
               )}
 
-              {/* Job Completed All-Delivered Celebration Card */}
+              {/* Job Completed All-Delivered Card */}
               {!isReturningToHub && remainingStops.length === 0 && stops.length > 0 && (
                 <div style={{
-                  margin: '16px',
-                  padding: '24px 20px',
-                  backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                  margin: '12px',
+                  padding: '18px 16px',
+                  backgroundColor: 'var(--color-success-subtle, rgba(16, 185, 129, 0.12))',
                   border: '1px solid rgba(16, 185, 129, 0.3)',
-                  borderRadius: '12px',
+                  borderRadius: '6px',
                   textAlign: 'center'
                 }}>
-                  <div style={{
-                    width: '48px',
-                    height: '48px',
-                    borderRadius: '50%',
-                    backgroundColor: '#10b981',
-                    color: '#fff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 12px auto'
-                  }}>
-                    <Check size={28} />
-                  </div>
-                  <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#34d399', margin: '0 0 6px 0' }}>
-                    Job Completed!
+                  <CheckCircle2 size={32} style={{ color: 'var(--color-success, #10b981)', margin: '0 auto 8px auto' }} />
+                  <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-success, #10b981)', margin: '0 0 4px 0' }}>
+                    Shift Batch Completed
                   </h3>
-                  <p style={{ fontSize: '12px', color: '#94a3b8', margin: '0 0 16px 0' }}>
-                    All {stops.length} deliveries in {currentJob?.job_id} have been completed successfully. Admin dashboard updated.
+                  <p style={{ fontSize: '11px', color: 'var(--text-secondary, #94a3b8)', margin: '0 0 12px 0' }}>
+                    All {stops.length} deliveries in {currentJob?.job_id} successfully dispatched.
                   </p>
                   <button
                     onClick={handleClaimAnotherJob}
                     disabled={releasingDriver}
                     style={{
-                      padding: '10px 18px',
-                      backgroundColor: releasingDriver ? '#334155' : '#2563eb',
+                      padding: '8px 16px',
+                      backgroundColor: releasingDriver ? 'var(--border-strong, #334158)' : 'var(--color-primary, #2563eb)',
                       color: '#ffffff',
                       border: 'none',
-                      borderRadius: '8px',
-                      fontSize: '13px',
-                      fontWeight: '700',
-                      cursor: releasingDriver ? 'not-allowed' : 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px'
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: releasingDriver ? 'not-allowed' : 'pointer'
                     }}
                   >
-                    {releasingDriver ? 'Releasing Driver...' : 'Claim Another Job ➔'}
+                    {releasingDriver ? 'Releasing Unit...' : 'Claim Next Job Batch ➔'}
                   </button>
                 </div>
               )}
 
               {/* Stop Cards */}
-              <div style={{ padding: '12px', flex: 1 }}>
+              <div style={{ padding: '10px', flex: 1 }}>
 
-                {/* ── Hub Origin Card (Stop 0) ─────────────────────── */}
+                {/* Hub Origin Card (Stop 0) */}
                 {stops.length > 0 && currentJob?.depot && (
                   <div style={{
-                    backgroundColor: '#0d1729',
-                    borderRadius: '10px',
-                    border: '1.5px solid #4f46e5',
-                    padding: '14px',
-                    marginBottom: '10px',
-                    boxShadow: '0 0 12px rgba(79,70,229,0.18)'
+                    backgroundColor: 'var(--bg-canvas, #0f141c)',
+                    borderRadius: '4px',
+                    border: '1px solid var(--border-subtle, #242e3f)',
+                    padding: '10px 12px',
+                    marginBottom: '8px'
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{
-                          width: '28px', height: '28px', borderRadius: '50%',
-                          backgroundColor: '#4f46e5', color: '#fff',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: '14px', fontWeight: '800', flexShrink: 0
-                        }}>🏢</div>
-                        <div>
-                          <div style={{ fontSize: '11px', color: '#818cf8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                            Origin · Stop 0
-                          </div>
-                          <div style={{ fontSize: '13px', fontWeight: '700', color: '#c7d2fe' }}>
-                            Central Distribution Hub
-                          </div>
-                        </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Building2 size={14} style={{ color: 'var(--color-primary, #2563eb)' }} />
+                        <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-primary, #f1f5f9)' }}>
+                          Central Logistics Hub
+                        </span>
                       </div>
                       <span style={{
-                        fontSize: '10px', fontWeight: '700', color: '#10b981',
-                        backgroundColor: 'rgba(16,185,129,0.15)',
-                        padding: '3px 8px', borderRadius: '10px',
-                        border: '1px solid rgba(16,185,129,0.3)'
+                        fontSize: '9px', fontWeight: 700, fontFamily: 'var(--font-mono)',
+                        color: 'var(--color-success, #10b981)', backgroundColor: 'var(--color-success-subtle, rgba(16, 185, 129, 0.12))',
+                        padding: '1px 5px', borderRadius: '2px', border: '1px solid rgba(16,185,129,0.3)'
                       }}>
-                        Trip Started ✓
+                        ORIGIN ✓
                       </span>
                     </div>
-                    <div style={{ fontSize: '11px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <MapPin size={11} />
-                      {currentJob.depot.name || 'Central Distribution Hub'} &nbsp;·&nbsp;
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted, #64748b)', fontFamily: 'var(--font-mono)' }}>
                       {currentJob.depot.lat?.toFixed(4)}, {currentJob.depot.lng?.toFixed(4)}
                     </div>
                   </div>
@@ -1033,17 +915,17 @@ export default function DriverDashboard({ user, onLogout }) {
 
                   const googleStopUrl = `https://www.google.com/maps/dir/?api=1&destination=${stop.lat},${stop.lng}&travelmode=driving`;
 
-                  let cardBg = '#1e293b';
-                  let cardBorder = '#334155';
+                  let cardBg = 'var(--bg-canvas, #0f141c)';
+                  let cardBorder = 'var(--border-subtle, #242e3f)';
                   if (isDelivered) {
-                    cardBg = '#0d181e';
-                    cardBorder = '#065f46';
+                    cardBg = 'rgba(16, 185, 129, 0.04)';
+                    cardBorder = 'rgba(16, 185, 129, 0.25)';
                   } else if (isFailed) {
-                    cardBg = 'rgba(239, 68, 68, 0.08)';
-                    cardBorder = 'rgba(239, 68, 68, 0.35)';
+                    cardBg = 'rgba(239, 68, 68, 0.05)';
+                    cardBorder = 'rgba(239, 68, 68, 0.3)';
                   } else if (isNext) {
-                    cardBg = '#132338';
-                    cardBorder = '#2563eb';
+                    cardBg = 'var(--bg-surface-raised, #1f2737)';
+                    cardBorder = 'var(--color-primary, #2563eb)';
                   }
 
                   return (
@@ -1051,84 +933,69 @@ export default function DriverDashboard({ user, onLogout }) {
                       key={stop.id || index}
                       style={{
                         backgroundColor: cardBg,
-                        borderRadius: '10px',
+                        borderRadius: '4px',
                         border: '1px solid',
                         borderColor: cardBorder,
-                        padding: '14px',
-                        marginBottom: '10px',
-                        position: 'relative',
-                        boxShadow: isNext ? '0 0 14px rgba(37, 99, 235, 0.25)' : 'none',
-                        transition: 'all 0.15s ease'
+                        padding: '10px 12px',
+                        marginBottom: '8px',
+                        transition: 'border-color 0.15s ease'
                       }}
                     >
                       {/* Stop Top Line */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span style={{
                             display: 'inline-flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            width: '26px',
-                            height: '26px',
+                            width: '20px',
+                            height: '20px',
                             borderRadius: '50%',
-                            backgroundColor: isDelivered ? '#10b981' : isFailed ? '#ef4444' : isNext ? '#2563eb' : '#475569',
+                            backgroundColor: isDelivered ? 'var(--color-success, #10b981)' : isFailed ? 'var(--color-danger, #ef4444)' : isNext ? 'var(--color-primary, #2563eb)' : 'var(--border-strong, #334158)',
                             color: '#fff',
-                            fontSize: '11px',
-                            fontWeight: '800'
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            fontFamily: 'var(--font-mono)'
                           }}>
-                            {isDelivered ? '✓' : isFailed ? '✕' : stop.label || `D${index+1}`}
+                            {isDelivered ? '✓' : isFailed ? '✕' : index + 1}
                           </span>
-                          <span style={{ fontSize: '12px', fontWeight: '700', color: isFailed ? '#fca5a5' : isNext ? '#38bdf8' : '#f8fafc' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary, #f1f5f9)' }}>
                             {stop.label || `D${index+1}`}: {stop.name}
                           </span>
                         </div>
 
                         <span style={{
-                          fontSize: '11px',
-                          fontWeight: '700',
-                          padding: '2px 8px',
-                          borderRadius: '999px',
-                          backgroundColor: isDelivered
-                            ? 'rgba(16, 185, 129, 0.2)'
-                            : isFailed
-                              ? 'rgba(239, 68, 68, 0.2)'
-                              : 'rgba(59, 130, 246, 0.2)',
-                          color: isDelivered
-                            ? '#34d399'
-                            : isFailed
-                              ? '#f87171'
-                              : '#60a5fa',
-                          border: `1px solid ${isDelivered ? '#10b981' : isFailed ? '#ef4444' : '#3b82f6'}`
+                          fontSize: '9px',
+                          fontWeight: 700,
+                          fontFamily: 'var(--font-mono)',
+                          padding: '1px 5px',
+                          borderRadius: '2px',
+                          backgroundColor: isDelivered ? 'var(--color-success-subtle, rgba(16, 185, 129, 0.12))' : isFailed ? 'var(--color-danger-subtle, rgba(239, 68, 68, 0.12))' : 'var(--bg-canvas, #0f141c)',
+                          color: isDelivered ? 'var(--color-success, #10b981)' : isFailed ? 'var(--color-danger, #ef4444)' : '#60a5fa',
+                          border: `1px solid ${isDelivered ? 'rgba(16,185,129,0.3)' : isFailed ? 'rgba(239,68,68,0.3)' : 'var(--border-subtle, #242e3f)'}`
                         }}>
-                          {isFailed ? 'Not Delivered' : (stop.status || 'Pending')}
+                          {isFailed ? 'FAILED' : isDelivered ? 'DELIVERED' : 'PENDING'}
                         </span>
                       </div>
 
                       {/* Demand & Details */}
-                      <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '8px', display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-                        <span>Demand: <strong>{stop.demand} kg</strong></span>
-                        {stop.delivered_at && <span>Delivered: <strong style={{ color: '#34d399' }}>{stop.delivered_at}</strong></span>}
-                        {stop.failed_at && <span>Reported: <strong style={{ color: '#f87171' }}>{stop.failed_at}</strong></span>}
+                      <div style={{ fontSize: '10px', color: 'var(--text-muted, #64748b)', marginBottom: '8px', display: 'flex', gap: '10px', fontFamily: 'var(--font-mono)' }}>
+                        <span>Demand: {stop.demand} kg</span>
+                        {stop.delivered_at && <span style={{ color: 'var(--color-success, #10b981)' }}>At {stop.delivered_at}</span>}
                       </div>
 
                       {/* Failure Reason Callout */}
                       {isFailed && (
                         <div style={{
-                          backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                          backgroundColor: 'var(--color-danger-subtle, rgba(239, 68, 68, 0.12))',
                           border: '1px solid rgba(239, 68, 68, 0.3)',
-                          borderRadius: '6px',
-                          padding: '8px 10px',
-                          marginBottom: '10px',
-                          fontSize: '11px',
-                          color: '#fca5a5'
+                          borderRadius: '3px',
+                          padding: '6px 8px',
+                          marginBottom: '8px',
+                          fontSize: '10px',
+                          color: 'var(--color-danger, #ef4444)'
                         }}>
-                          <div style={{ fontWeight: '700', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <AlertCircle size={13} />
-                            Reason: {stop.failed_reason || 'Undelivered'}
-                          </div>
-                          <div style={{ fontSize: '10px', color: '#e2e8f0', opacity: 0.85 }}>
-                            📦 Undelivered package will be returned to Central Hub at end of shift.
-                          </div>
+                          <strong>Exception:</strong> {stop.failed_reason || 'Undelivered'}
                         </div>
                       )}
 
@@ -1137,21 +1004,19 @@ export default function DriverDashboard({ user, onLogout }) {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        paddingTop: '8px',
-                        borderTop: '1px solid rgba(255,255,255,0.06)'
+                        paddingTop: '6px',
+                        borderTop: '1px solid var(--border-subtle, #242e3f)'
                       }}>
-                        {/* Status Buttons / Labels */}
                         {isDelivered ? (
-                          <span style={{ fontSize: '12px', color: '#10b981', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <Check size={14} /> Completed & Removed from Route
+                          <span style={{ fontSize: '11px', color: 'var(--color-success, #10b981)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Check size={12} /> Completed
                           </span>
                         ) : isFailed ? (
-                          <span style={{ fontSize: '12px', color: '#f87171', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <RotateCcw size={13} /> Return to Hub Scheduled
+                          <span style={{ fontSize: '11px', color: 'var(--color-danger, #ef4444)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <RotateCcw size={12} /> Hub Return Scheduled
                           </span>
                         ) : (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                            {/* Verify OTP Button */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <button
                               type="button"
                               disabled={isCompleting || isFailing}
@@ -1159,23 +1024,21 @@ export default function DriverDashboard({ user, onLogout }) {
                               style={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '5px',
-                                padding: '6px 11px',
-                                backgroundColor: '#2563eb',
+                                gap: '4px',
+                                padding: '5px 9px',
+                                backgroundColor: 'var(--color-primary, #2563eb)',
                                 color: '#ffffff',
                                 border: 'none',
-                                borderRadius: '6px',
+                                borderRadius: '3px',
                                 fontSize: '11px',
-                                fontWeight: '700',
-                                cursor: (isCompleting || isFailing) ? 'not-allowed' : 'pointer',
-                                boxShadow: '0 2px 8px rgba(37, 99, 235, 0.35)'
+                                fontWeight: 600,
+                                cursor: 'pointer'
                               }}
                             >
-                              <KeyRound size={12} />
+                              <KeyRound size={11} />
                               <span>Verify OTP</span>
                             </button>
 
-                            {/* Mark Delivered Button */}
                             <button
                               type="button"
                               disabled={isCompleting || isFailing}
@@ -1183,23 +1046,21 @@ export default function DriverDashboard({ user, onLogout }) {
                               style={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '5px',
-                                padding: '6px 11px',
-                                backgroundColor: '#059669',
-                                color: '#ffffff',
-                                border: 'none',
-                                borderRadius: '6px',
+                                gap: '4px',
+                                padding: '5px 8px',
+                                backgroundColor: 'transparent',
+                                color: 'var(--color-success, #10b981)',
+                                border: '1px solid rgba(16, 185, 129, 0.4)',
+                                borderRadius: '3px',
                                 fontSize: '11px',
-                                fontWeight: '700',
-                                cursor: (isCompleting || isFailing) ? 'not-allowed' : 'pointer',
-                                boxShadow: '0 2px 8px rgba(5, 150, 105, 0.3)'
+                                fontWeight: 600,
+                                cursor: 'pointer'
                               }}
                             >
-                              <CheckCircle2 size={12} />
-                              <span>{isCompleting ? 'Updating…' : 'Quick Deliver'}</span>
+                              <CheckCircle2 size={11} />
+                              <span>{isCompleting ? '...' : 'Quick'}</span>
                             </button>
 
-                            {/* Not Delivered Button */}
                             <button
                               type="button"
                               disabled={isCompleting || isFailing}
@@ -1211,25 +1072,23 @@ export default function DriverDashboard({ user, onLogout }) {
                               style={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '5px',
-                                padding: '6px 9px',
-                                backgroundColor: 'rgba(239, 68, 68, 0.15)',
-                                color: '#f87171',
-                                border: '1px solid rgba(239, 68, 68, 0.45)',
-                                borderRadius: '6px',
+                                gap: '4px',
+                                padding: '5px 8px',
+                                backgroundColor: 'transparent',
+                                color: 'var(--color-danger, #ef4444)',
+                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                borderRadius: '3px',
                                 fontSize: '11px',
-                                fontWeight: '700',
-                                cursor: (isCompleting || isFailing) ? 'not-allowed' : 'pointer',
-                                transition: 'all 0.15s ease'
+                                fontWeight: 600,
+                                cursor: 'pointer'
                               }}
                             >
-                              <XCircle size={12} />
-                              <span>Not Delivered</span>
+                              <XCircle size={11} />
+                              <span>Failed</span>
                             </button>
                           </div>
                         )}
 
-                        {/* Google Maps Turn-by-Turn Link */}
                         <a
                           href={googleStopUrl}
                           target="_blank"
@@ -1238,19 +1097,17 @@ export default function DriverDashboard({ user, onLogout }) {
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '4px',
-                            fontSize: '11px',
-                            color: '#38bdf8',
+                            fontSize: '10px',
+                            color: 'var(--text-secondary, #94a3b8)',
                             textDecoration: 'none',
-                            fontWeight: '600',
-                            padding: '5px 9px',
-                            borderRadius: '5px',
-                            backgroundColor: 'rgba(56, 189, 248, 0.1)',
-                            border: '1px solid rgba(56, 189, 248, 0.25)'
+                            padding: '4px 6px',
+                            borderRadius: '3px',
+                            border: '1px solid var(--border-subtle, #242e3f)'
                           }}
                         >
-                          <Navigation size={11} />
-                          <span>Navigate</span>
-                          <ExternalLink size={10} />
+                          <Navigation size={10} />
+                          <span>Nav</span>
+                          <ExternalLink size={9} />
                         </a>
                       </div>
                     </div>
@@ -1259,28 +1116,25 @@ export default function DriverDashboard({ user, onLogout }) {
               </div>
             </div>
 
-
             {/* Right: Driver Dedicated Map */}
             <div style={{ flex: 1, height: '100%', position: 'relative' }}>
-              {/* Google Maps Live Route Overlay */}
               {googleMapsUrl && (
                 <div style={{
                   position: 'absolute',
-                  top: '16px',
+                  top: '12px',
                   left: '60px',
                   zIndex: 1000,
-                  backgroundColor: 'rgba(15, 23, 42, 0.94)',
-                  backdropFilter: 'blur(8px)',
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  border: '1px solid #334155',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                  backgroundColor: 'var(--bg-surface, #171d28)',
+                  padding: '6px 12px',
+                  borderRadius: '4px',
+                  border: '1px solid var(--border-subtle, #242e3f)',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '12px'
+                  gap: '10px'
                 }}>
-                  <span style={{ fontSize: '12px', color: '#e2e8f0', fontWeight: '500' }}>
-                    🚦 Google Traffic-Aware Route: <strong>{currentJob?.job_id}</strong>
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary, #94a3b8)' }}>
+                    Active turn-by-turn route: <strong style={{ color: '#60a5fa' }}>{currentJob?.job_id}</strong>
                   </span>
                   <a
                     href={googleMapsUrl}
@@ -1289,18 +1143,18 @@ export default function DriverDashboard({ user, onLogout }) {
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '5px',
-                      backgroundColor: '#2563eb',
+                      gap: '4px',
+                      backgroundColor: 'var(--color-primary, #2563eb)',
                       color: '#ffffff',
-                      padding: '5px 10px',
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      fontWeight: '700',
+                      padding: '4px 8px',
+                      borderRadius: '3px',
+                      fontSize: '11px',
+                      fontWeight: 600,
                       textDecoration: 'none'
                     }}
                   >
-                    <span>Open Live Route in Google Maps</span>
-                    <ExternalLink size={12} />
+                    <span>Open External Maps</span>
+                    <ExternalLink size={10} />
                   </a>
                 </div>
               )}
@@ -1308,7 +1162,7 @@ export default function DriverDashboard({ user, onLogout }) {
               <MapContainer
                 center={mapCenter}
                 zoom={13}
-                style={{ width: '100%', height: '100%', backgroundColor: '#090d16' }}
+                style={{ width: '100%', height: '100%', backgroundColor: '#0f141c' }}
               >
                 <TileLayer
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -1321,34 +1175,33 @@ export default function DriverDashboard({ user, onLogout }) {
                 {userGps?.lat && userGps?.lng && (
                   <CircleMarker
                     center={[userGps.lat, userGps.lng]}
-                    radius={9}
+                    radius={8}
                     pathOptions={{
-                      fillColor: '#38bdf8',
+                      fillColor: '#60a5fa',
                       fillOpacity: 1,
                       color: '#ffffff',
-                      weight: 3
+                      weight: 2
                     }}
                   >
                     <Popup>
-                      <div style={{ color: '#000', fontSize: '12px' }}>
-                        <strong>📍 Your Current GPS Location</strong><br />
-                        Lat: {userGps.lat.toFixed(4)}, Lng: {userGps.lng.toFixed(4)}
+                      <div style={{ color: '#000', fontSize: '11px' }}>
+                        <strong>Driver GPS Position</strong><br />
+                        {userGps.lat.toFixed(4)}, {userGps.lng.toFixed(4)}
                       </div>
                     </Popup>
                   </CircleMarker>
                 )}
 
-                {/* Central Hub / Depot Marker */}
+                {/* Central Hub Marker */}
                 {currentJob?.depot && (
                   <Marker
                     position={[currentJob.depot.lat, currentJob.depot.lng]}
                     icon={createDepotIcon()}
                   >
                     <Popup>
-                      <div style={{ color: '#0f172a', fontSize: '12px' }}>
-                        <strong>🏢 Central Distribution Hub (Depot)</strong><br />
-                        {currentJob.depot.name}<br />
-                        <span style={{ color: '#4f46e5', fontWeight: 'bold' }}>Route Origin & Undelivered Goods Return Point</span>
+                      <div style={{ minWidth: '160px' }}>
+                        <strong>Central Logistics Hub</strong><br />
+                        {currentJob.depot.name}
                       </div>
                     </Popup>
                   </Marker>
@@ -1362,26 +1215,13 @@ export default function DriverDashboard({ user, onLogout }) {
                     icon={createStopIcon(stop.label || `D${i+1}`, stop.status)}
                   >
                     <Popup>
-                      <div style={{ color: '#0f172a', fontSize: '12px', minWidth: '180px' }}>
-                        <div style={{ fontWeight: '700', fontSize: '13px', marginBottom: '4px' }}>
+                      <div style={{ minWidth: '170px' }}>
+                        <div style={{ fontWeight: 600, fontSize: '12px', marginBottom: '2px' }}>
                           {stop.label || `D${i+1}`}: {stop.name}
                         </div>
-                        <div>Status: <strong style={{ color: stop.status === 'Failed' ? '#ef4444' : stop.status === 'Delivered' ? '#10b981' : '#3b82f6' }}>{stop.status === 'Failed' ? 'Not Delivered' : (stop.status || 'Pending')}</strong></div>
-                        {stop.failed_reason && (
-                          <div style={{ color: '#dc2626', marginTop: '4px', fontSize: '11px' }}>
-                            <strong>Reason:</strong> {stop.failed_reason}
-                          </div>
-                        )}
-                        <div>Demand: {stop.demand} kg</div>
-                        <div style={{ marginTop: '8px' }}>
-                          <a
-                            href={`https://www.google.com/maps/dir/?api=1&destination=${stop.lat},${stop.lng}&travelmode=driving`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ color: '#2563eb', fontWeight: '600', textDecoration: 'none' }}
-                          >
-                            Navigate in Google Maps ➔
-                          </a>
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary, #94a3b8)' }}>
+                          Status: {stop.status || 'Pending'}<br />
+                          Demand: {stop.demand} kg
                         </div>
                       </div>
                     </Popup>
@@ -1390,28 +1230,16 @@ export default function DriverDashboard({ user, onLogout }) {
 
                 {/* Remaining Route Polyline */}
                 {polylineCoords.length > 1 && (
-                  <>
-                    <Polyline
-                      positions={polylineCoords}
-                      pathOptions={{
-                        color: activeRoute?.traffic_color || '#3b82f6',
-                        weight: 8,
-                        opacity: 0.35,
-                        lineCap: 'round',
-                        lineJoin: 'round'
-                      }}
-                    />
-                    <Polyline
-                      positions={polylineCoords}
-                      pathOptions={{
-                        color: activeRoute?.traffic_color || '#3b82f6',
-                        weight: 4,
-                        opacity: 0.95,
-                        lineCap: 'round',
-                        lineJoin: 'round'
-                      }}
-                    />
-                  </>
+                  <Polyline
+                    positions={polylineCoords}
+                    pathOptions={{
+                      color: activeRoute?.traffic_color || '#3b82f6',
+                      weight: 4,
+                      opacity: 0.9,
+                      lineCap: 'round',
+                      lineJoin: 'round'
+                    }}
+                  />
                 )}
               </MapContainer>
             </div>
@@ -1423,11 +1251,8 @@ export default function DriverDashboard({ user, onLogout }) {
       {failModalStop && (
         <div style={{
           position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.78)',
+          inset: 0,
+          backgroundColor: 'rgba(5, 7, 12, 0.75)',
           backdropFilter: 'blur(4px)',
           display: 'flex',
           alignItems: 'center',
@@ -1436,84 +1261,67 @@ export default function DriverDashboard({ user, onLogout }) {
           padding: '16px'
         }}>
           <div style={{
-            backgroundColor: '#1e293b',
-            border: '1px solid #475569',
-            borderRadius: '14px',
-            maxWidth: '520px',
+            backgroundColor: 'var(--bg-surface-raised, #1f2737)',
+            border: '1px solid var(--border-strong, #334158)',
+            borderRadius: '6px',
+            maxWidth: '480px',
             width: '100%',
-            padding: '24px',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
-            position: 'relative'
+            padding: '20px',
+            boxShadow: '0 20px 40px -10px rgba(0,0,0,0.8)'
           }}>
-            {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '50%',
-                    backgroundColor: '#ef4444',
-                    color: '#fff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 'bold',
-                    fontSize: '14px'
-                  }}>✕</span>
-                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#f8fafc' }}>
-                    Report Undelivered Package
-                  </h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{
+                  width: '26px', height: '26px', borderRadius: '4px',
+                  background: 'var(--color-danger-subtle, rgba(239, 68, 68, 0.12))',
+                  color: 'var(--color-danger, #ef4444)', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  <AlertTriangle size={15} />
                 </div>
-                <p style={{ margin: '4px 0 0 36px', fontSize: '12px', color: '#94a3b8' }}>
-                  {failModalStop.label}: {failModalStop.name}
-                </p>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--text-primary, #f8fafc)' }}>
+                    Report delivery exception
+                  </h3>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: 'var(--text-muted, #64748b)' }}>
+                    {failModalStop.label}: {failModalStop.name}
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => { setFailModalStop(null); setFailCustomNotes(''); }}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#94a3b8',
-                  cursor: 'pointer',
-                  padding: '4px'
-                }}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted, #64748b)', cursor: 'pointer', padding: '2px' }}
               >
-                <X size={20} />
+                <X size={16} />
               </button>
             </div>
 
-            {/* Info notice */}
             <div style={{
-              backgroundColor: 'rgba(239, 68, 68, 0.12)',
-              border: '1px solid rgba(239, 68, 68, 0.35)',
-              borderRadius: '8px',
-              padding: '10px 12px',
-              marginBottom: '16px',
-              fontSize: '12px',
-              color: '#fca5a5',
-              lineHeight: 1.4
+              backgroundColor: 'var(--color-danger-subtle, rgba(239, 68, 68, 0.12))',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              borderRadius: '4px',
+              padding: '8px 10px',
+              marginBottom: '14px',
+              fontSize: '11px',
+              color: 'var(--color-danger, #ef4444)'
             }}>
-              ⚠️ <strong>Notice:</strong> This reason will appear in the <strong>Admin Dashboard</strong> with delivery status in real time. The route will re-optimize for remaining stops, and your final stop will be back to the <strong>Central Hub</strong> to return undelivered goods.
+              This exception logs to the Central Operations console immediately. Remaining route will re-optimize, and return to Central Hub will be scheduled.
             </div>
 
-            {/* Reason selector */}
-            <div style={{ marginBottom: '14px' }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>
-                Select Reason for Failed Delivery:
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary, #94a3b8)', marginBottom: '4px' }}>
+                Exception Reason:
               </label>
               <select
                 value={failReason}
                 onChange={(e) => setFailReason(e.target.value)}
                 style={{
                   width: '100%',
-                  padding: '10px 12px',
-                  backgroundColor: '#0f172a',
-                  border: '1px solid #334155',
-                  borderRadius: '8px',
-                  color: '#f8fafc',
-                  fontSize: '13px',
-                  outline: 'none'
+                  padding: '8px 10px',
+                  backgroundColor: 'var(--bg-canvas, #0f141c)',
+                  border: '1px solid var(--border-subtle, #242e3f)',
+                  borderRadius: '4px',
+                  color: 'var(--text-primary, #f8fafc)',
+                  fontSize: '12px'
                 }}
               >
                 <option value="Customer unavailable / Not home">Customer unavailable / Not home</option>
@@ -1527,44 +1335,40 @@ export default function DriverDashboard({ user, onLogout }) {
               </select>
             </div>
 
-            {/* Optional notes */}
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>
-                Additional Driver Remarks / Reason Details:
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary, #94a3b8)', marginBottom: '4px' }}>
+                Additional remarks:
               </label>
               <textarea
-                rows={3}
+                rows={2}
                 value={failCustomNotes}
                 onChange={(e) => setFailCustomNotes(e.target.value)}
-                placeholder="E.g., Called recipient twice, gatekeeper stated recipient out of town until tomorrow."
+                placeholder="Details of attempt…"
                 style={{
                   width: '100%',
-                  padding: '10px 12px',
-                  backgroundColor: '#0f172a',
-                  border: '1px solid #334155',
-                  borderRadius: '8px',
-                  color: '#f8fafc',
-                  fontSize: '12px',
-                  resize: 'vertical',
-                  outline: 'none',
+                  padding: '8px 10px',
+                  backgroundColor: 'var(--bg-canvas, #0f141c)',
+                  border: '1px solid var(--border-subtle, #242e3f)',
+                  borderRadius: '4px',
+                  color: 'var(--text-primary, #f8fafc)',
+                  fontSize: '11px',
                   boxSizing: 'border-box'
                 }}
               />
             </div>
 
-            {/* Action buttons */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
               <button
                 type="button"
                 onClick={() => { setFailModalStop(null); setFailCustomNotes(''); }}
                 style={{
-                  padding: '8px 16px',
-                  backgroundColor: '#334155',
-                  color: '#e2e8f0',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '13px',
-                  fontWeight: '600',
+                  padding: '7px 12px',
+                  backgroundColor: 'transparent',
+                  border: '1px solid var(--border-subtle, #242e3f)',
+                  color: 'var(--text-secondary, #94a3b8)',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  fontWeight: 600,
                   cursor: 'pointer'
                 }}
               >
@@ -1577,26 +1381,19 @@ export default function DriverDashboard({ user, onLogout }) {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px',
-                  padding: '8px 18px',
-                  backgroundColor: '#dc2626',
+                  gap: '5px',
+                  padding: '7px 14px',
+                  backgroundColor: 'var(--color-danger, #ef4444)',
                   color: '#ffffff',
                   border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '13px',
-                  fontWeight: '700',
-                  cursor: failingStopId !== null ? 'not-allowed' : 'pointer',
-                  boxShadow: '0 4px 12px rgba(220, 38, 38, 0.4)'
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: failingStopId !== null ? 'not-allowed' : 'pointer'
                 }}
               >
-                {failingStopId !== null ? (
-                  <span>Re-optimizing Route…</span>
-                ) : (
-                  <>
-                    <XCircle size={15} />
-                    <span>Confirm Not Delivered</span>
-                  </>
-                )}
+                <XCircle size={14} />
+                <span>{failingStopId !== null ? 'Re-optimizing...' : 'Confirm Exception'}</span>
               </button>
             </div>
           </div>
@@ -1611,8 +1408,8 @@ export default function DriverDashboard({ user, onLogout }) {
           driverGps={userGps?.lat ? { lat: userGps.lat, lng: userGps.lng } : { lat: 28.6139, lng: 77.2090 }}
           onSuccess={(data) => {
             setOtpModalStop(null);
-            setSuccessMessage(`✅ OTP Verified! Stop marked as Delivered & remaining route re-optimized.`);
-            setTimeout(() => setSuccessMessage(null), 5000);
+            setSuccessMessage(`OTP Handshake verified. Consignment marked as Delivered.`);
+            setTimeout(() => setSuccessMessage(null), 4000);
             fetchDriverData();
           }}
           onCancel={() => setOtpModalStop(null)}

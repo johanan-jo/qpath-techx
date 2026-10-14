@@ -16,7 +16,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="QPath API - Quantum-Inspired Traffic Route Optimization",
     version="1.0.0",
-    description="Backend optimization engine for SIH 2026 Problem Statement 26137",
+    description="Backend optimization engine for Quantum-Inspired Intelligent Traffic Route Optimization",
     lifespan=lifespan
 )
 

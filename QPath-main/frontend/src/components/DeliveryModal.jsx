@@ -1,37 +1,19 @@
 import React, { useState } from 'react';
+import {
+  Package, Search, Plus, Trash2, ArrowUp, ArrowDown,
+  Building2, Compass, X, Check, MapPin, Sliders
+} from 'lucide-react';
 import { searchAddress } from '../services/api';
-
-const PRESETS = {
-  delhi: [
-    { id: 'd1', name: 'India Gate, New Delhi', lat: 28.6129, lng: 77.2295, demand: 15.0 },
-    { id: 'd2', name: 'AIIMS Hospital, Ansari Nagar', lat: 28.5672, lng: 77.2100, demand: 20.0 },
-    { id: 'd3', name: 'Karol Bagh Market', lat: 28.6517, lng: 77.1906, demand: 12.0 },
-    { id: 'd4', name: 'Lajpat Nagar Central Market', lat: 28.5700, lng: 77.2400, demand: 18.0 }
-  ],
-  mumbai: [
-    { id: 'd1', name: 'Gateway of India, Colaba', lat: 18.9220, lng: 72.8347, demand: 15.0 },
-    { id: 'd2', name: 'Bandra Kurla Complex (BKC)', lat: 19.0657, lng: 72.8688, demand: 25.0 },
-    { id: 'd3', name: 'Juhu Beach, Andheri West', lat: 19.0988, lng: 72.8267, demand: 14.0 },
-    { id: 'd4', name: 'Dadar TT Circle', lat: 19.0178, lng: 72.8478, demand: 18.0 }
-  ],
-  bengaluru: [
-    { id: 'd1', name: 'MG Road Metro Station', lat: 12.9756, lng: 77.6066, demand: 12.0 },
-    { id: 'd2', name: 'Indiranagar 100ft Road', lat: 12.9784, lng: 77.6408, demand: 16.0 },
-    { id: 'd3', name: 'Koramangala 5th Block', lat: 12.9352, lng: 77.6245, demand: 22.0 },
-    { id: 'd4', name: 'Whitefield ITPL Main Road', lat: 12.9866, lng: 77.7381, demand: 20.0 }
-  ]
-};
 
 export default function DeliveryModal({
   isOpen,
   onClose,
   depot,
-  deliveryPoints,
+  deliveryPoints = [],
   onAddPoint,
   onRemovePoint,
   onReorderPoint,
   onClearAll,
-  onLoadPreset,
   onOptimize,
   geoStatus,
   onRequestGps
@@ -93,42 +75,55 @@ export default function DeliveryModal({
     <div style={{
       position: 'fixed',
       inset: 0,
-      background: 'rgba(15, 23, 42, 0.80)',
-      backdropFilter: 'blur(6px)',
+      background: 'rgba(5, 7, 12, 0.75)',
+      backdropFilter: 'blur(4px)',
       zIndex: 9000,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '20px'
+      padding: '16px'
     }}>
       <div style={{
-        background: '#1e293b',
-        border: '1px solid #334155',
-        borderRadius: '16px',
+        background: 'var(--bg-surface-raised, #1f2737)',
+        border: '1px solid var(--border-strong, #334158)',
+        borderRadius: '8px',
         width: '100%',
         maxWidth: '680px',
         maxHeight: '90vh',
         display: 'flex',
         flexDirection: 'column',
-        boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
+        boxShadow: '0 20px 40px -10px rgba(0,0,0,0.8)',
         overflow: 'hidden'
       }}>
-        
         {/* Header */}
         <div style={{
-          padding: '16px 20px',
-          borderBottom: '1px solid #334155',
+          padding: '14px 18px',
+          borderBottom: '1px solid var(--border-subtle, #242e3f)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          background: '#0f172a'
+          background: 'var(--bg-surface, #171d28)'
         }}>
-          <div>
-            <h2 style={{ margin: 0, fontSize: '18px', color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span>📦</span> Manage Delivery Points
-            </h2>
-            <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>
-              Add destinations via address search, manual coordinates, or direct map click.
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '28px',
+              height: '28px',
+              borderRadius: '4px',
+              background: 'var(--color-primary-subtle, rgba(37, 99, 235, 0.12))',
+              color: 'var(--color-primary, #2563eb)'
+            }}>
+              <Package size={16} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text-primary, #f8fafc)' }}>
+                Delivery Waypoints & Stops Configuration
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted, #64748b)' }}>
+                Manage destination geolocations, package payload demands, and route sequence
+              </div>
             </div>
           </div>
           <button
@@ -136,100 +131,117 @@ export default function DeliveryModal({
             style={{
               background: 'transparent',
               border: 'none',
-              color: '#94a3b8',
-              fontSize: '22px',
+              color: 'var(--text-muted, #64748b)',
               cursor: 'pointer',
-              padding: '4px'
+              padding: '4px',
+              borderRadius: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
           >
-            ✕
+            <X size={16} />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div style={{ padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '14px' }}>
           
-          {/* Depot Location Banner */}
+          {/* Starting Depot Card */}
           <div style={{
-            background: '#0f172a',
-            border: '1px solid #10b981',
-            borderRadius: '10px',
-            padding: '12px 16px',
+            background: 'var(--bg-canvas, #0f141c)',
+            border: '1px solid var(--border-subtle, #242e3f)',
+            borderRadius: '6px',
+            padding: '10px 14px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center'
           }}>
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span>🏠</span> Starting Depot (GPS Origin)
-              </div>
-              <div style={{ fontSize: '12px', color: '#e2e8f0', marginTop: '2px' }}>
-                {depot?.name || 'Current Location'} <span style={{ color: '#94a3b8' }}>({depot?.lat?.toFixed(4)}, {depot?.lng?.toFixed(4)})</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Building2 size={18} style={{ color: 'var(--color-primary, #2563eb)' }} />
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted, #64748b)' }}>
+                  Central depot / hub (origin)
+                </div>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary, #f8fafc)' }}>
+                  {depot?.name || 'Central Logistics Hub'}
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted, #64748b)', fontFamily: 'var(--font-mono)' }}>
+                  {depot?.lat?.toFixed(4)}, {depot?.lng?.toFixed(4)}
+                </div>
               </div>
             </div>
+
             <button
               onClick={onRequestGps}
               style={{
-                background: geoStatus === 'granted' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(59, 130, 246, 0.2)',
-                border: `1px solid ${geoStatus === 'granted' ? '#10b981' : '#3b82f6'}`,
-                color: geoStatus === 'granted' ? '#34d399' : '#60a5fa',
-                padding: '5px 12px',
-                borderRadius: '6px',
-                fontSize: '12px',
+                background: geoStatus === 'granted' ? 'var(--color-success-subtle, rgba(16, 185, 129, 0.12))' : 'var(--bg-surface-raised, #1f2737)',
+                border: `1px solid ${geoStatus === 'granted' ? 'var(--color-success, #10b981)' : 'var(--border-strong, #334158)'}`,
+                color: geoStatus === 'granted' ? 'var(--color-success, #10b981)' : 'var(--text-secondary, #94a3b8)',
+                padding: '6px 10px',
+                borderRadius: '4px',
+                fontSize: '11px',
+                fontWeight: 600,
                 cursor: 'pointer',
-                fontWeight: '500'
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px'
               }}
             >
-              {geoStatus === 'granted' ? '📍 GPS Active' : '📡 Acquire GPS'}
+              <Compass size={12} />
+              <span>{geoStatus === 'granted' ? 'GPS Calibrated' : 'Calibrate GPS'}</span>
             </button>
           </div>
 
-          {/* Search Address Box */}
+          {/* Search Place / Address */}
           <div>
-            <label style={{ display: 'block', fontSize: '13px', color: '#cbd5e1', marginBottom: '6px', fontWeight: '500' }}>
-              Search Place or Address (OpenStreetMap)
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary, #94a3b8)', marginBottom: '6px' }}>
+              Add Stop via OpenStreetMap Address Search:
             </label>
             <form onSubmit={handleSearch} style={{ display: 'flex', gap: '8px' }}>
               <input
                 type="text"
-                placeholder="e.g. Connaught Place, India Gate, Bandra..."
+                placeholder="Search landmark, street, or market (e.g. Connaught Place, India Gate)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{
                   flex: 1,
-                  padding: '10px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid #475569',
-                  background: '#0f172a',
-                  color: '#fff',
-                  fontSize: '14px'
+                  padding: '8px 12px',
+                  borderRadius: '4px',
+                  border: '1px solid var(--border-subtle, #242e3f)',
+                  background: 'var(--bg-canvas, #0f141c)',
+                  color: 'var(--text-primary, #f8fafc)',
+                  fontSize: '12px'
                 }}
               />
               <button
                 type="submit"
                 disabled={searching}
                 style={{
-                  padding: '10px 18px',
-                  borderRadius: '8px',
+                  padding: '8px 14px',
+                  borderRadius: '4px',
                   border: 'none',
-                  background: '#3b82f6',
-                  color: '#fff',
-                  fontSize: '13px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
+                  background: 'var(--color-primary, #2563eb)',
+                  color: '#ffffff',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px'
                 }}
               >
-                {searching ? 'Searching...' : 'Search'}
+                <Search size={13} />
+                <span>{searching ? 'Searching...' : 'Search'}</span>
               </button>
             </form>
 
-            {/* Results dropdown */}
             {searchResults.length > 0 && (
               <div style={{
-                marginTop: '6px',
-                background: '#0f172a',
-                border: '1px solid #475569',
-                borderRadius: '8px',
+                marginTop: '4px',
+                background: 'var(--bg-canvas, #0f141c)',
+                border: '1px solid var(--border-strong, #334158)',
+                borderRadius: '4px',
                 maxHeight: '160px',
                 overflowY: 'auto'
               }}>
@@ -238,133 +250,112 @@ export default function DeliveryModal({
                     key={idx}
                     onClick={() => handleSelectResult(res)}
                     style={{
-                      padding: '10px 12px',
-                      borderBottom: '1px solid #334155',
-                      fontSize: '13px',
-                      color: '#e2e8f0',
+                      padding: '8px 10px',
+                      borderBottom: '1px solid var(--border-subtle, #242e3f)',
+                      fontSize: '11px',
+                      color: 'var(--text-primary, #f8fafc)',
                       cursor: 'pointer',
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center'
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = '#1e293b'}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-surface-raised, #1f2737)'}
                     onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                   >
                     <div>
                       <strong>+ {res.short_name}</strong>
-                      <div style={{ fontSize: '11px', color: '#94a3b8' }}>{res.name}</div>
+                      <div style={{ fontSize: '10px', color: 'var(--text-muted, #64748b)' }}>{res.name}</div>
                     </div>
-                    <span style={{ color: '#10b981', fontSize: '12px', fontWeight: 'bold' }}>+ Add Stop</span>
+                    <span style={{ color: 'var(--color-primary, #2563eb)', fontWeight: 600 }}>Select</span>
                   </div>
                 ))}
               </div>
             )}
           </div>
 
-          {/* Manual Coordinate Form Toggle */}
-          <div>
+          {/* Manual Coordinate Input Bar Toggle */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
             <button
+              type="button"
               onClick={() => setShowManualForm(!showManualForm)}
               style={{
                 background: 'transparent',
                 border: 'none',
-                color: '#60a5fa',
-                fontSize: '12px',
+                color: 'var(--color-info, #0284c7)',
+                fontSize: '11px',
+                fontWeight: 600,
                 cursor: 'pointer',
-                padding: 0,
-                textDecoration: 'underline'
+                padding: '2px 0'
               }}
             >
-              {showManualForm ? '▲ Hide Coordinate Inputs' : '▼ Or Enter Exact GPS Coordinates Manually'}
+              {showManualForm ? 'Hide Coordinate Form' : '+ Add via GPS Coordinates'}
             </button>
-
-            {showManualForm && (
-              <form onSubmit={handleAddManual} style={{
-                marginTop: '8px',
-                background: '#0f172a',
-                padding: '12px',
-                borderRadius: '8px',
-                border: '1px solid #334155',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '8px'
-              }}>
-                <input
-                  type="text"
-                  placeholder="Stop Name / Description"
-                  value={manualName}
-                  onChange={(e) => setManualName(e.target.value)}
-                  style={{ padding: '8px', borderRadius: '6px', border: '1px solid #475569', background: '#1e293b', color: '#fff', fontSize: '13px' }}
-                />
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input
-                    type="number" step="any" placeholder="Latitude (e.g. 28.6129)"
-                    value={manualLat} onChange={(e) => setManualLat(e.target.value)} required
-                    style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #475569', background: '#1e293b', color: '#fff', fontSize: '13px' }}
-                  />
-                  <input
-                    type="number" step="any" placeholder="Longitude (e.g. 77.2295)"
-                    value={manualLng} onChange={(e) => setManualLng(e.target.value)} required
-                    style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #475569', background: '#1e293b', color: '#fff', fontSize: '13px' }}
-                  />
-                  <input
-                    type="number" min="1" max="500" placeholder="Demand kg"
-                    value={manualDemand} onChange={(e) => setManualDemand(e.target.value)}
-                    style={{ width: '90px', padding: '8px', borderRadius: '6px', border: '1px solid #475569', background: '#1e293b', color: '#fff', fontSize: '13px' }}
-                  />
-                </div>
-                <button
-                  type="submit"
-                  style={{
-                    padding: '8px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: '#10b981',
-                    color: '#fff',
-                    fontWeight: 'bold',
-                    fontSize: '13px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  + Add Coordinate Stop
-                </button>
-              </form>
-            )}
           </div>
 
-          {/* Quick Presets */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '12px', color: '#94a3b8' }}>Sample Drops:</span>
-            {['delhi', 'mumbai', 'bengaluru'].map(city => (
+          {showManualForm && (
+            <form onSubmit={handleAddManual} style={{
+              background: 'var(--bg-canvas, #0f141c)',
+              padding: '10px',
+              borderRadius: '4px',
+              border: '1px solid var(--border-subtle, #242e3f)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px'
+            }}>
+              <input
+                type="text"
+                placeholder="Waypoint Name (e.g. Zone 4 Distribution Center)"
+                value={manualName}
+                onChange={(e) => setManualName(e.target.value)}
+                style={{ padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-subtle, #242e3f)', background: 'var(--bg-surface, #171d28)', color: '#fff', fontSize: '11px' }}
+              />
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="number" step="any" placeholder="Latitude (e.g. 28.6129)"
+                  value={manualLat} onChange={(e) => setManualLat(e.target.value)} required
+                  style={{ flex: 1, padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-subtle, #242e3f)', background: 'var(--bg-surface, #171d28)', color: '#fff', fontSize: '11px', fontFamily: 'var(--font-mono)' }}
+                />
+                <input
+                  type="number" step="any" placeholder="Longitude (e.g. 77.2295)"
+                  value={manualLng} onChange={(e) => setManualLng(e.target.value)} required
+                  style={{ flex: 1, padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-subtle, #242e3f)', background: 'var(--bg-surface, #171d28)', color: '#fff', fontSize: '11px', fontFamily: 'var(--font-mono)' }}
+                />
+                <input
+                  type="number" min="1" max="500" placeholder="Demand kg"
+                  value={manualDemand} onChange={(e) => setManualDemand(e.target.value)}
+                  style={{ width: '80px', padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-subtle, #242e3f)', background: 'var(--bg-surface, #171d28)', color: '#fff', fontSize: '11px', fontFamily: 'var(--font-mono)' }}
+                />
+              </div>
               <button
-                key={city}
-                onClick={() => onLoadPreset(PRESETS[city])}
+                type="submit"
                 style={{
-                  padding: '4px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid #334155',
-                  background: '#0f172a',
-                  color: '#94a3b8',
+                  padding: '6px 10px',
+                  borderRadius: '3px',
+                  border: 'none',
+                  background: 'var(--color-primary, #2563eb)',
+                  color: '#fff',
+                  fontWeight: 600,
                   fontSize: '11px',
-                  textTransform: 'capitalize',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  alignSelf: 'flex-start'
                 }}
               >
-                {city} ({PRESETS[city].length})
+                + Append Stop
               </button>
-            ))}
-          </div>
+            </form>
+          )}
 
-          {/* Current Delivery Points List */}
+          {/* Current Stops List */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#f8fafc' }}>
-                Delivery List ({deliveryPoints.length} Stops)
+              <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary, #94a3b8)' }}>
+                Configured Stops ({deliveryPoints.length})
               </span>
               {deliveryPoints.length > 0 && (
                 <button
+                  type="button"
                   onClick={onClearAll}
-                  style={{ background: 'transparent', border: 'none', color: '#ef4444', fontSize: '12px', cursor: 'pointer' }}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--color-danger, #ef4444)', fontSize: '11px', cursor: 'pointer' }}
                 >
                   Clear All
                 </button>
@@ -375,130 +366,143 @@ export default function DeliveryModal({
               <div style={{
                 padding: '24px',
                 textAlign: 'center',
-                color: '#64748b',
-                fontSize: '13px',
-                border: '1px dashed #334155',
-                borderRadius: '8px'
+                color: 'var(--text-muted, #64748b)',
+                fontSize: '12px',
+                border: '1px dashed var(--border-subtle, #242e3f)',
+                borderRadius: '6px'
               }}>
-                No delivery stops added yet.<br/>Search an address above or click anywhere on the live map.
+                No stops added yet. Search an address, enter GPS coordinates, or click directly on the live map canvas.
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '220px', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '240px', overflowY: 'auto' }}>
                 {deliveryPoints.map((pt, idx) => (
                   <div
                     key={pt.id || idx}
                     style={{
-                      background: '#0f172a',
-                      border: '1px solid #334155',
-                      borderRadius: '8px',
-                      padding: '10px 14px',
+                      background: 'var(--bg-canvas, #0f141c)',
+                      border: '1px solid var(--border-subtle, #242e3f)',
+                      borderRadius: '4px',
+                      padding: '8px 12px',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '12px'
+                      gap: '10px'
                     }}
                   >
-                    {/* Numbered Marker Badge */}
                     <span style={{
-                      background: '#2563eb',
-                      color: '#fff',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      padding: '4px 8px',
-                      borderRadius: '12px',
-                      flexShrink: 0
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      color: 'var(--color-primary, #2563eb)',
+                      background: 'var(--color-primary-subtle, rgba(37, 99, 235, 0.12))',
+                      padding: '2px 6px',
+                      borderRadius: '3px'
                     }}>
                       D{idx + 1}
                     </span>
 
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '13px', fontWeight: '500', color: '#f8fafc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary, #f8fafc)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {pt.name}
                       </div>
-                      <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
-                        GPS: {pt.lat?.toFixed(4)}, {pt.lng?.toFixed(4)} • Package: <strong>{pt.demand || 10} kg</strong>
+                      <div style={{ fontSize: '10px', color: 'var(--text-muted, #64748b)', fontFamily: 'var(--font-mono)' }}>
+                        {pt.lat?.toFixed(4)}, {pt.lng?.toFixed(4)} · Payload: {pt.demand || 10} kg
                       </div>
                     </div>
 
-                    {/* Reorder Buttons */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <div style={{ display: 'flex', gap: '2px' }}>
                       <button
+                        type="button"
                         disabled={idx === 0}
                         onClick={() => onReorderPoint(idx, idx - 1)}
-                        style={{ background: 'transparent', border: 'none', color: idx === 0 ? '#334155' : '#cbd5e1', fontSize: '10px', cursor: idx === 0 ? 'default' : 'pointer' }}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: idx === 0 ? 'var(--border-strong, #334158)' : 'var(--text-secondary, #94a3b8)',
+                          padding: '2px 4px',
+                          cursor: idx === 0 ? 'default' : 'pointer'
+                        }}
                       >
-                        ▲
+                        <ArrowUp size={12} />
                       </button>
                       <button
+                        type="button"
                         disabled={idx === deliveryPoints.length - 1}
                         onClick={() => onReorderPoint(idx, idx + 1)}
-                        style={{ background: 'transparent', border: 'none', color: idx === deliveryPoints.length - 1 ? '#334155' : '#cbd5e1', fontSize: '10px', cursor: idx === deliveryPoints.length - 1 ? 'default' : 'pointer' }}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: idx === deliveryPoints.length - 1 ? 'var(--border-strong, #334158)' : 'var(--text-secondary, #94a3b8)',
+                          padding: '2px 4px',
+                          cursor: idx === deliveryPoints.length - 1 ? 'default' : 'pointer'
+                        }}
                       >
-                        ▼
+                        <ArrowDown size={12} />
                       </button>
                     </div>
 
-                    {/* Delete */}
                     <button
+                      type="button"
                       onClick={() => onRemovePoint(idx)}
-                      style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '16px', cursor: 'pointer', padding: '0 4px' }}
-                      title="Delete Stop"
+                      style={{ background: 'transparent', border: 'none', color: 'var(--text-muted, #64748b)', cursor: 'pointer', padding: '2px 4px' }}
+                      title="Remove stop"
                     >
-                      ✕
+                      <Trash2 size={13} />
                     </button>
                   </div>
                 ))}
               </div>
             )}
           </div>
-
         </div>
 
-        {/* Footer Actions */}
+        {/* Footer */}
         <div style={{
-          padding: '16px 20px',
-          borderTop: '1px solid #334155',
+          padding: '12px 18px',
+          borderTop: '1px solid var(--border-subtle, #242e3f)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          background: '#0f172a'
+          background: 'var(--bg-surface, #171d28)'
         }}>
-          <button
-            onClick={onClose}
-            style={{
-              padding: '10px 18px',
-              borderRadius: '8px',
-              border: '1px solid #475569',
-              background: '#1e293b',
-              color: '#cbd5e1',
-              fontSize: '13px',
-              cursor: 'pointer'
-            }}
-          >
-            Close
-          </button>
-
-          <button
-            onClick={() => {
-              onClose();
-              onOptimize();
-            }}
-            disabled={deliveryPoints.length === 0}
-            style={{
-              padding: '10px 24px',
-              borderRadius: '8px',
-              border: 'none',
-              background: deliveryPoints.length === 0 ? '#475569' : '#2563eb',
-              color: '#fff',
-              fontSize: '14px',
-              fontWeight: 'bold',
-              cursor: deliveryPoints.length === 0 ? 'not-allowed' : 'pointer',
-              boxShadow: '0 4px 14px rgba(37, 99, 235, 0.4)'
-            }}
-          >
-            ⚡ Apply & Optimize Route (QPSO)
-          </button>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted, #64748b)' }}>
+            {deliveryPoints.length} total waypoints active
+          </span>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                padding: '7px 12px',
+                background: 'transparent',
+                border: '1px solid var(--border-subtle, #242e3f)',
+                borderRadius: '4px',
+                color: 'var(--text-secondary, #94a3b8)',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              onClick={onOptimize}
+              disabled={deliveryPoints.length === 0}
+              style={{
+                padding: '7px 14px',
+                background: 'var(--color-primary, #2563eb)',
+                border: 'none',
+                borderRadius: '4px',
+                color: '#ffffff',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: deliveryPoints.length === 0 ? 'not-allowed' : 'pointer'
+              }}
+            >
+              Apply & Run QPSO
+            </button>
+          </div>
         </div>
-
       </div>
     </div>
   );

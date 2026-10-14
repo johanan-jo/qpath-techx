@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
 
-SECRET_KEY = "qpath-sih-secret-key-2026"
+SECRET_KEY = "qpath-jwt-secret-key-2026"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_SECONDS = 60 * 60 * 24  # 24 hours
 

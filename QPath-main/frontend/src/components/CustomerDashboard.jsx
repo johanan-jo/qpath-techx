@@ -1,4 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  Package, Truck, Navigation, KeyRound, CheckCircle2,
+  AlertTriangle, Building2, Clock, RotateCcw, ShieldCheck,
+  Check, X, Activity, ArrowRight, Shield
+} from 'lucide-react';
 import { getCustomerDeliveryStatus, customerRegenerateOTP } from '../services/api';
 
 /* ─────────────────────────────────────────────────────────────────
@@ -8,11 +13,11 @@ import { getCustomerDeliveryStatus, customerRegenerateOTP } from '../services/ap
 ───────────────────────────────────────────────────────────────────── */
 
 const STEPS = [
-  { id: 1, icon: '📦', label: 'Order Confirmed' },
-  { id: 2, icon: '🚚', label: 'Out for Delivery' },
-  { id: 3, icon: '📍', label: 'Driver Approaching' },
-  { id: 4, icon: '🔐', label: 'OTP Verification' },
-  { id: 5, icon: '✅', label: 'Delivered' },
+  { id: 1, icon: Package, label: 'Order Confirmed' },
+  { id: 2, icon: Truck, label: 'Out for Delivery' },
+  { id: 3, icon: Navigation, label: 'Driver Approaching' },
+  { id: 4, icon: KeyRound, label: 'OTP Verification' },
+  { id: 5, icon: CheckCircle2, label: 'Delivered' },
 ];
 
 const STATUS_STEP_MAP = {
@@ -27,9 +32,9 @@ const STATUS_STEP_MAP = {
 const S = {
   outer: {
     minHeight: '100vh',
-    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-    fontFamily: "'Inter', 'Segoe UI', sans-serif",
-    color: '#f8fafc',
+    background: 'var(--bg-canvas, #0f141c)',
+    fontFamily: 'var(--font-sans)',
+    color: 'var(--text-primary, #f8fafc)',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
@@ -37,119 +42,141 @@ const S = {
   },
   header: {
     width: '100%',
-    background: 'rgba(30,41,59,0.95)',
-    borderBottom: '1px solid #334155',
-    padding: '14px 24px',
+    background: 'var(--bg-surface, #171d28)',
+    borderBottom: '1px solid var(--border-subtle, #242e3f)',
+    padding: '12px 24px',
     display: 'flex',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: '12px',
-    marginBottom: '32px',
-  },
-  logo: { fontSize: '22px', fontWeight: 900, color: '#60a5fa', letterSpacing: '-0.5px' },
-  badge: {
-    fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px',
-    background: 'rgba(59,130,246,0.18)', color: '#60a5fa',
+    marginBottom: '28px',
   },
   card: {
-    background: '#1e293b',
-    border: '1px solid #334155',
-    borderRadius: '16px',
-    padding: '28px',
+    background: 'var(--bg-surface, #171d28)',
+    border: '1px solid var(--border-subtle, #242e3f)',
+    borderRadius: '6px',
+    padding: '20px 24px',
     width: '100%',
-    maxWidth: '560px',
-    marginBottom: '16px',
+    maxWidth: '540px',
+    marginBottom: '14px',
   },
   sectionTitle: {
-    fontSize: '11px', fontWeight: 700, color: '#64748b',
-    textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: '16px',
+    fontSize: '11px',
+    fontWeight: 600,
+    color: 'var(--text-muted, #64748b)',
+    marginBottom: '14px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px'
   },
-  // OTP display box
   otpBox: {
-    background: 'rgba(59,130,246,0.12)',
-    border: '2px dashed #3b82f6',
-    borderRadius: '12px',
-    padding: '20px',
+    background: 'var(--bg-canvas, #0f141c)',
+    border: '1px solid var(--border-strong, #334158)',
+    borderRadius: '6px',
+    padding: '18px',
     textAlign: 'center',
-    marginBottom: '16px',
+    marginBottom: '14px',
   },
-  otpLabel: { fontSize: '12px', color: '#94a3b8', marginBottom: '8px' },
+  otpLabel: { fontSize: '12px', color: 'var(--text-secondary, #94a3b8)', marginBottom: '8px' },
   otpCode: {
-    fontSize: '38px', fontWeight: 900, letterSpacing: '10px',
-    color: '#60a5fa', fontVariantNumeric: 'tabular-nums',
+    fontSize: '36px',
+    fontWeight: 700,
+    letterSpacing: '8px',
+    color: '#60a5fa',
+    fontFamily: 'var(--font-mono)',
   },
-  otpExpiry: { fontSize: '11px', color: '#64748b', marginTop: '8px' },
-  // Progress stepper
+  otpExpiry: { fontSize: '11px', color: 'var(--text-muted, #64748b)', marginTop: '8px', fontFamily: 'var(--font-mono)' },
   stepRow: { display: 'flex', alignItems: 'flex-start', gap: '0' },
   stepDot: (active, done) => ({
-    width: '32px', height: '32px', borderRadius: '50%',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: '16px', flexShrink: 0,
-    background: done ? '#10b981' : active ? '#3b82f6' : '#1e293b',
-    border: `2px solid ${done ? '#10b981' : active ? '#3b82f6' : '#334155'}`,
-    boxShadow: active ? '0 0 12px rgba(59,130,246,0.5)' : 'none',
-    transition: 'all 0.3s ease',
+    width: '28px',
+    height: '28px',
+    borderRadius: '4px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    background: done ? 'var(--color-success, #10b981)' : active ? 'var(--color-primary, #2563eb)' : 'var(--bg-surface-raised, #1f2737)',
+    border: `1px solid ${done ? 'var(--color-success, #10b981)' : active ? 'var(--color-primary, #2563eb)' : 'var(--border-subtle, #242e3f)'}`,
+    color: done || active ? '#ffffff' : 'var(--text-muted, #64748b)',
+    transition: 'all 0.2s ease',
   }),
   stepLine: (done) => ({
-    width: '2px', flex: 1, minHeight: '28px', margin: '4px 0',
-    background: done ? '#10b981' : '#334155',
-    marginLeft: '15px',
-    transition: 'background 0.3s ease',
+    width: '2px',
+    flex: 1,
+    minHeight: '24px',
+    margin: '3px 0',
+    background: done ? 'var(--color-success, #10b981)' : 'var(--border-subtle, #242e3f)',
+    marginLeft: '13px',
+    transition: 'background 0.2s ease',
   }),
   stepLabel: (active, done) => ({
-    fontSize: '13px', fontWeight: active ? 700 : 400,
-    color: done ? '#10b981' : active ? '#60a5fa' : '#64748b',
+    fontSize: '12px',
+    fontWeight: active ? 600 : 500,
+    color: done ? 'var(--color-success, #10b981)' : active ? 'var(--text-primary, #f8fafc)' : 'var(--text-muted, #64748b)',
   }),
-  stepDesc: { fontSize: '11px', color: '#64748b', marginTop: '2px' },
-  // Info rows
   infoRow: {
-    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    padding: '10px 0', borderBottom: '1px solid #1e293b',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '8px 0',
+    borderBottom: '1px solid var(--border-subtle, #242e3f)',
   },
-  infoLabel: { fontSize: '12px', color: '#64748b' },
-  infoValue: { fontSize: '13px', fontWeight: 600, color: '#f1f5f9', textAlign: 'right', maxWidth: '60%' },
-  // Status pill
-  pill: (color) => ({
-    display: 'inline-block', padding: '3px 10px', borderRadius: '20px',
-    fontSize: '11px', fontWeight: 700,
-    background: `${color}22`, color: color, border: `1px solid ${color}44`,
-  }),
-  // Buttons
+  infoLabel: { fontSize: '12px', color: 'var(--text-muted, #64748b)' },
+  infoValue: { fontSize: '12px', fontWeight: 600, color: 'var(--text-primary, #f8fafc)', textAlign: 'right', maxWidth: '65%' },
   btn: (color) => ({
-    padding: '10px 20px', borderRadius: '8px', border: 'none',
-    background: color || '#3b82f6', color: '#fff',
-    fontWeight: 700, fontSize: '13px', cursor: 'pointer',
+    padding: '8px 16px',
+    borderRadius: '4px',
+    border: 'none',
+    background: color || 'var(--color-primary, #2563eb)',
+    color: '#fff',
+    fontWeight: 600,
+    fontSize: '12px',
+    cursor: 'pointer',
     transition: 'opacity 0.15s',
   }),
-  // Error / info
   errorBox: {
-    background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)',
-    borderRadius: '12px', padding: '20px', textAlign: 'center',
-    maxWidth: '400px', margin: '0 auto',
-  },
-  loadingPulse: {
-    display: 'flex', flexDirection: 'column', alignItems: 'center',
-    gap: '12px', padding: '64px 0',
+    background: 'var(--bg-surface, #171d28)',
+    border: '1px solid rgba(239,68,68,0.3)',
+    borderRadius: '6px',
+    padding: '24px',
+    textAlign: 'center',
+    maxWidth: '420px',
+    margin: '0 auto',
   },
 };
 
 function StatusPill({ status }) {
   const colors = {
-    'Delivered': '#10b981',
-    'Pending': '#f59e0b',
-    'In Progress': '#3b82f6',
-    'Failed': '#ef4444',
+    'Delivered': 'var(--color-success, #10b981)',
+    'Pending': 'var(--color-warning, #f59e0b)',
+    'In Progress': 'var(--color-primary, #2563eb)',
+    'Delivering': 'var(--color-info, #0284c7)',
+    'Failed': 'var(--color-danger, #ef4444)',
     'Returned to Hub & Checked In': '#8b5cf6',
-    'Verified': '#10b981',
-    'Active': '#3b82f6',
-    'Expired': '#ef4444',
+    'Verified': 'var(--color-success, #10b981)',
+    'Active': 'var(--color-primary, #2563eb)',
+    'Expired': 'var(--color-danger, #ef4444)',
   };
-  const color = colors[status] || '#94a3b8';
-  return <span style={S.pill(color)}>{status}</span>;
+  const color = colors[status] || 'var(--text-muted, #64748b)';
+  return (
+    <span style={{
+      display: 'inline-block',
+      padding: '2px 8px',
+      borderRadius: '3px',
+      fontSize: '10px',
+      fontWeight: 500,
+      background: 'var(--bg-canvas, #0f141c)',
+      color: color,
+      border: `1px solid ${color}40`
+    }}>
+      {status}
+    </span>
+  );
 }
 
 function ProgressStepper({ currentStep, failed }) {
   const steps = failed
-    ? [...STEPS.slice(0, 3), { id: 4, icon: '⚠️', label: 'Not Delivered' }, STEPS[4]]
+    ? [...STEPS.slice(0, 3), { id: 4, icon: AlertTriangle, label: 'Delivery exception' }, STEPS[4]]
     : STEPS;
 
   return (
@@ -158,16 +185,18 @@ function ProgressStepper({ currentStep, failed }) {
         const done = currentStep > step.id;
         const active = currentStep === step.id;
         const isLast = idx === steps.length - 1;
+        const StepIcon = step.icon;
+
         return (
           <div key={step.id}>
             <div style={S.stepRow}>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginRight: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginRight: '14px' }}>
                 <div style={S.stepDot(active, done)}>
-                  {done ? '✓' : step.icon}
+                  {done ? <Check size={14} /> : <StepIcon size={14} />}
                 </div>
                 {!isLast && <div style={S.stepLine(done)} />}
               </div>
-              <div style={{ paddingTop: '6px', paddingBottom: isLast ? 0 : '28px' }}>
+              <div style={{ paddingTop: '4px', paddingBottom: isLast ? 0 : '20px' }}>
                 <div style={S.stepLabel(active, done)}>{step.label}</div>
               </div>
             </div>
@@ -181,15 +210,20 @@ function ProgressStepper({ currentStep, failed }) {
 function LivePulse() {
   return (
     <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: '6px',
-      fontSize: '11px', color: '#10b981',
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '6px',
+      fontSize: '11px',
+      color: 'var(--color-success, #10b981)',
     }}>
       <span style={{
-        width: '7px', height: '7px', borderRadius: '50%', background: '#10b981',
-        animation: 'pulse-ring 1.4s infinite',
+        width: '6px',
+        height: '6px',
+        borderRadius: '50%',
+        background: 'var(--color-success, #10b981)',
         display: 'inline-block',
       }} />
-      LIVE
+      Live
     </span>
   );
 }
@@ -200,7 +234,7 @@ function CountdownTimer({ generatedAt, expiresIn }) {
   useEffect(() => {
     if (!expiresIn) return;
     const startTime = Date.now();
-    const totalMs = expiresIn * 60 * 1000; // convert minutes to ms
+    const totalMs = expiresIn * 60 * 1000;
 
     const tick = () => {
       const elapsed = Date.now() - startTime;
@@ -217,8 +251,8 @@ function CountdownTimer({ generatedAt, expiresIn }) {
   const secs = Math.floor((remaining % 60000) / 1000);
   const expired = remaining === 0;
   return (
-    <span style={{ color: expired ? '#ef4444' : '#94a3b8', fontSize: '11px' }}>
-      {expired ? '⏰ OTP Expired' : `⏱ Expires in ${mins}m ${secs}s`}
+    <span style={{ color: expired ? 'var(--color-danger, #ef4444)' : 'var(--text-muted, #64748b)', fontSize: '11px', fontFamily: 'var(--font-mono)' }}>
+      {expired ? 'OTP expired' : `Expires in ${mins}m ${secs}s`}
     </span>
   );
 }
@@ -240,7 +274,7 @@ export default function CustomerDashboard({ token, onExit }) {
       setError(null);
     } catch (e) {
       if (loading) {
-        setError(e.response?.data?.detail || 'Invalid delivery token or delivery not found.');
+        setError(e.response?.data?.detail || 'Invalid delivery token or delivery record not found.');
       }
     } finally {
       setLoading(false);
@@ -259,7 +293,7 @@ export default function CustomerDashboard({ token, onExit }) {
     try {
       const res = await customerRegenerateOTP(token);
       setNewOTP(res.data.otp);
-      setRegenMsg({ type: 'success', text: 'New OTP generated! Share it with the delivery driver.' });
+      setRegenMsg({ type: 'success', text: 'New OTP issued. Share with your delivery operator upon arrival.' });
       fetchStatus();
     } catch (e) {
       setRegenMsg({ type: 'error', text: e.response?.data?.detail || 'Failed to generate new OTP.' });
@@ -272,31 +306,44 @@ export default function CustomerDashboard({ token, onExit }) {
     return (
       <div style={S.outer}>
         <div style={S.header}>
-          <span style={{ fontSize: '22px' }}>⚛</span>
-          <span style={S.logo}>QPath</span>
-          <span style={S.badge}>CUSTOMER TRACKING</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{
+              width: '24px', height: '24px', borderRadius: '4px',
+              background: 'var(--color-primary, #2563eb)', color: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontWeight: 700, fontSize: '13px'
+            }}>
+              Q
+            </div>
+            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary, #f8fafc)' }}>QPath</span>
+            <span style={{
+              fontSize: '10px', fontWeight: 500,
+              padding: '1px 5px', borderRadius: '3px', background: 'var(--border-strong, #334158)',
+              color: 'var(--text-secondary, #94a3b8)'
+            }}>
+              Consignment tracking
+            </span>
+          </div>
           {onExit && (
             <button
               onClick={onExit}
               style={{
-                marginLeft: 'auto',
                 background: 'transparent',
-                border: '1px solid #334155',
-                color: '#94a3b8',
-                borderRadius: '6px',
+                border: '1px solid var(--border-subtle, #242e3f)',
+                color: 'var(--text-secondary, #94a3b8)',
+                borderRadius: '4px',
                 padding: '4px 10px',
-                fontSize: '12px',
+                fontSize: '11px',
                 cursor: 'pointer'
               }}
             >
-              Exit Tracking
+              Exit
             </button>
           )}
         </div>
-        <div style={S.loadingPulse}>
-          <div style={{ fontSize: '36px', animation: 'spin 1.2s linear infinite' }}>⚛</div>
-          <div style={{ color: '#64748b', fontSize: '14px' }}>Loading your delivery status…</div>
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '64px 0' }}>
+          <Activity size={24} className="animate-spin" style={{ color: 'var(--color-primary, #2563eb)' }} />
+          <div style={{ color: 'var(--text-muted, #64748b)', fontSize: '12px' }}>Locating delivery consignment…</div>
         </div>
       </div>
     );
@@ -306,20 +353,34 @@ export default function CustomerDashboard({ token, onExit }) {
     return (
       <div style={S.outer}>
         <div style={S.header}>
-          <span style={{ fontSize: '22px' }}>⚛</span>
-          <span style={S.logo}>QPath</span>
-          <span style={S.badge}>CUSTOMER TRACKING</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{
+              width: '24px', height: '24px', borderRadius: '4px',
+              background: 'var(--color-primary, #2563eb)', color: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontWeight: 700, fontSize: '13px'
+            }}>
+              Q
+            </div>
+            <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary, #f8fafc)' }}>QPath</span>
+            <span style={{
+              fontSize: '9px', fontWeight: 600,
+              padding: '1px 5px', borderRadius: '3px', background: 'var(--border-strong, #334158)',
+              color: 'var(--text-secondary, #94a3b8)'
+            }}>
+              Consignment tracking
+            </span>
+          </div>
           {onExit && (
             <button
               onClick={onExit}
               style={{
-                marginLeft: 'auto',
                 background: 'transparent',
-                border: '1px solid #334155',
-                color: '#94a3b8',
-                borderRadius: '6px',
+                border: '1px solid var(--border-subtle, #242e3f)',
+                color: 'var(--text-secondary, #94a3b8)',
+                borderRadius: '4px',
                 padding: '4px 10px',
-                fontSize: '12px',
+                fontSize: '11px',
                 cursor: 'pointer'
               }}
             >
@@ -329,30 +390,27 @@ export default function CustomerDashboard({ token, onExit }) {
         </div>
         <div style={{ padding: '64px 24px' }}>
           <div style={S.errorBox}>
-            <div style={{ fontSize: '36px', marginBottom: '12px' }}>❌</div>
-            <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: '8px', color: '#ef4444' }}>
-              Delivery Not Found
+            <AlertTriangle size={32} style={{ color: 'var(--color-danger, #ef4444)', margin: '0 auto 10px auto', display: 'block' }} />
+            <div style={{ fontWeight: 600, fontSize: '15px', marginBottom: '6px', color: 'var(--color-danger, #ef4444)' }}>
+              Consignment Not Located
             </div>
-            <div style={{ fontSize: '13px', color: '#94a3b8', lineHeight: 1.6 }}>{error}</div>
-            <div style={{ marginTop: '16px', fontSize: '12px', color: '#64748b' }}>
-              Please check your delivery token and try again, or contact support.
-            </div>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary, #94a3b8)', lineHeight: 1.5 }}>{error}</div>
             {onExit && (
               <button
                 onClick={onExit}
                 style={{
                   marginTop: '16px',
-                  background: '#2563eb',
+                  background: 'var(--color-primary, #2563eb)',
                   border: 'none',
                   color: '#ffffff',
-                  borderRadius: '6px',
-                  padding: '8px 16px',
-                  fontSize: '13px',
-                  fontWeight: '600',
+                  borderRadius: '4px',
+                  padding: '7px 14px',
+                  fontSize: '12px',
+                  fontWeight: 600,
                   cursor: 'pointer'
                 }}
               >
-                Go to Login
+                Return to Login
               </button>
             )}
           </div>
@@ -372,182 +430,208 @@ export default function CustomerDashboard({ token, onExit }) {
 
   return (
     <div style={S.outer}>
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes pulse-ring {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.4; transform: scale(1.3); }
-        }
-        * { box-sizing: border-box; }
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-track { background: #0f172a; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-      `}</style>
-
-      {/* Header */}
+      {/* Top Header */}
       <div style={S.header}>
-        <span style={{ fontSize: '22px' }}>⚛</span>
-        <span style={S.logo}>QPath</span>
-        <span style={S.badge}>CUSTOMER TRACKING</span>
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{
+            width: '24px', height: '24px', borderRadius: '4px',
+            background: 'var(--color-primary, #2563eb)', color: '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontWeight: 700, fontSize: '13px'
+          }}>
+            Q
+          </div>
+          <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary, #f8fafc)' }}>QPath</span>
+          <span style={{
+            fontSize: '9px', fontWeight: 700, fontFamily: 'var(--font-mono)',
+            padding: '1px 5px', borderRadius: '3px', background: 'var(--border-strong, #334158)',
+            color: 'var(--text-secondary, #94a3b8)'
+          }}>
+            Consignment tracking
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <LivePulse />
           {onExit && (
             <button
               onClick={onExit}
               style={{
-                background: '#1e293b',
-                border: '1px solid #334155',
-                color: '#94a3b8',
-                borderRadius: '6px',
+                background: 'transparent',
+                border: '1px solid var(--border-subtle, #242e3f)',
+                color: 'var(--text-secondary, #94a3b8)',
+                borderRadius: '4px',
                 padding: '4px 10px',
-                fontSize: '12px',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
+                fontSize: '11px',
+                fontWeight: 600,
+                cursor: 'pointer'
               }}
             >
-              Exit Tracking
+              Exit
             </button>
           )}
         </div>
       </div>
 
-      <div style={{ width: '100%', maxWidth: '560px', padding: '0 16px' }}>
+      <div style={{ width: '100%', maxWidth: '540px', padding: '0 16px' }}>
 
-        {/* ── Greeting & Delivery ID ── */}
-        <div style={{ ...S.card, textAlign: 'center', borderColor: isDelivered ? '#10b981' : isFailed ? '#ef4444' : '#3b82f6' }}>
-          <div style={{ fontSize: '36px', marginBottom: '8px' }}>
-            {isDelivered ? '✅' : isFailed ? '⚠️' : '📦'}
+        {/* ── Status Banner Card ── */}
+        <div style={{
+          ...S.card,
+          textAlign: 'center',
+          borderColor: isDelivered ? 'var(--color-success, #10b981)' : isFailed ? 'var(--color-danger, #ef4444)' : 'var(--border-strong, #334158)'
+        }}>
+          <div style={{ marginBottom: '8px' }}>
+            {isDelivered ? (
+              <CheckCircle2 size={36} style={{ color: 'var(--color-success, #10b981)', margin: '0 auto' }} />
+            ) : isFailed ? (
+              <AlertTriangle size={36} style={{ color: 'var(--color-danger, #ef4444)', margin: '0 auto' }} />
+            ) : (
+              <Package size={36} style={{ color: 'var(--color-primary, #2563eb)', margin: '0 auto' }} />
+            )}
           </div>
-          <div style={{ fontSize: '22px', fontWeight: 800, marginBottom: '4px' }}>
-            {isDelivered ? 'Delivered!' : isFailed ? 'Delivery Attempted' : 'Your Delivery is On the Way'}
+          <div style={{ fontSize: '18px', fontWeight: 700, marginBottom: '2px', color: 'var(--text-primary, #f8fafc)' }}>
+            {isDelivered ? 'Consignment Delivered' : isFailed ? 'Delivery Exception Logged' : 'Consignment En Route'}
           </div>
-          <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '12px' }}>
-            Hi {delivery.customer_name} — here's your live delivery status
+          <div style={{ fontSize: '12px', color: 'var(--text-muted, #64748b)', marginBottom: '10px' }}>
+            Customer: {delivery.customer_name} · Consignment #{delivery.delivery_id}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
             <StatusPill status={delivery.status} />
-            <span style={{ fontSize: '11px', color: '#64748b', alignSelf: 'center' }}>
-              ID: {delivery.delivery_id}
-            </span>
           </div>
         </div>
 
-        {/* ── OTP Box (only when not yet delivered and OTP exists) ── */}
+        {/* ── OTP Verification Box (When not delivered) ── */}
         {!isDelivered && (
           <div style={S.card}>
-            <div style={S.sectionTitle}>🔐 Your Delivery OTP</div>
+            <div style={S.sectionTitle}>
+              <KeyRound size={13} />
+              <span>Delivery OTP verification</span>
+            </div>
+
             {otpVerified ? (
-              <div style={{ ...S.otpBox, borderColor: '#10b981', background: 'rgba(16,185,129,0.08)' }}>
-                <div style={{ fontSize: '28px', marginBottom: '8px' }}>✅</div>
-                <div style={{ fontWeight: 700, color: '#10b981', fontSize: '16px' }}>OTP Verified</div>
-                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
-                  Your delivery has been verified and completed.
+              <div style={{ ...S.otpBox, borderColor: 'var(--color-success, #10b981)' }}>
+                <CheckCircle2 size={24} style={{ color: 'var(--color-success, #10b981)', margin: '0 auto 6px auto' }} />
+                <div style={{ fontWeight: 600, color: 'var(--color-success, #10b981)', fontSize: '14px' }}>OTP Handshake Verified</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted, #64748b)', marginTop: '2px' }}>
+                  Delivery receipt confirmed by recipient.
                 </div>
               </div>
             ) : otpToDisplay && !otpExpired ? (
               <div style={S.otpBox}>
-                <div style={S.otpLabel}>Share this code with your delivery driver:</div>
+                <div style={S.otpLabel}>Provide this 6-digit verification code to the delivery driver:</div>
                 <div style={S.otpCode}>{otpToDisplay}</div>
                 <div style={S.otpExpiry}>
                   <CountdownTimer expiresIn={delivery.otp_status === 'Active' ? 30 : 0} />
                 </div>
               </div>
             ) : (
-              <div style={{ ...S.otpBox, borderColor: '#ef4444', background: 'rgba(239,68,68,0.08)' }}>
-                <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏰</div>
-                <div style={{ fontWeight: 700, color: '#ef4444', fontSize: '15px', marginBottom: '4px' }}>
-                  {otpExpired ? 'OTP Expired' : 'No OTP available yet'}
+              <div style={{ ...S.otpBox, borderColor: 'var(--color-danger, #ef4444)' }}>
+                <Clock size={20} style={{ color: 'var(--color-danger, #ef4444)', margin: '0 auto 6px auto' }} />
+                <div style={{ fontWeight: 600, color: 'var(--color-danger, #ef4444)', fontSize: '13px', marginBottom: '2px' }}>
+                  {otpExpired ? 'OTP Expired' : 'Awaiting OTP Generation'}
                 </div>
-                <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '12px' }}>
-                  {otpExpired
-                    ? 'Your OTP has expired. Request a new one below.'
-                    : 'An OTP will be generated when your delivery is ready.'}
+                <div style={{ fontSize: '11px', color: 'var(--text-muted, #64748b)', marginBottom: '10px' }}>
+                  {otpExpired ? 'The previous token has expired. Generate a fresh code below.' : 'A code will be generated upon dispatch.'}
                 </div>
                 {otpExpired && (
                   <button
-                    style={S.btn('#f59e0b')}
+                    style={S.btn('var(--color-primary, #2563eb)')}
                     onClick={handleRegenOTP}
                     disabled={regenLoading}
                   >
-                    {regenLoading ? '⏳ Generating…' : '🔄 Request New OTP'}
+                    {regenLoading ? 'Generating...' : 'Request New OTP'}
                   </button>
                 )}
               </div>
             )}
+
             {regenMsg && (
               <div style={{
-                marginTop: '10px', padding: '10px 14px', borderRadius: '8px', fontSize: '13px',
-                background: regenMsg.type === 'success' ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)',
-                color: regenMsg.type === 'success' ? '#10b981' : '#ef4444',
-                border: `1px solid ${regenMsg.type === 'success' ? '#10b981' : '#ef4444'}44`,
+                marginTop: '8px',
+                padding: '8px 10px',
+                borderRadius: '4px',
+                fontSize: '11px',
+                background: regenMsg.type === 'success' ? 'var(--color-success-subtle, rgba(16, 185, 129, 0.12))' : 'var(--color-danger-subtle, rgba(239, 68, 68, 0.12))',
+                color: regenMsg.type === 'success' ? 'var(--color-success, #10b981)' : 'var(--color-danger, #ef4444)',
+                border: `1px solid ${regenMsg.type === 'success' ? 'var(--color-success, #10b981)' : 'var(--color-danger, #ef4444)'}40`
               }}>
                 {regenMsg.text}
-              </div>
-            )}
-            {newOTP && (
-              <div style={{ marginTop: '10px', fontSize: '12px', color: '#64748b', textAlign: 'center' }}>
-                💡 Keep this code safe — share only with your delivery driver.
               </div>
             )}
           </div>
         )}
 
-        {/* ── Tracking Progress ── */}
+        {/* ── Tracking Progress Stepper ── */}
         <div style={S.card}>
-          <div style={S.sectionTitle}>📍 Delivery Progress</div>
+          <div style={S.sectionTitle}>
+            <Navigation size={13} />
+            <span>Progress timeline</span>
+          </div>
           <ProgressStepper currentStep={currentStep} failed={isFailed} />
         </div>
 
         {/* ── Delivery Details ── */}
         <div style={S.card}>
-          <div style={S.sectionTitle}>📋 Delivery Details</div>
+          <div style={S.sectionTitle}>
+            <Building2 size={13} />
+            <span>Consignment details</span>
+          </div>
+
           {[
-            { label: 'Destination', value: delivery.destination?.name || '—' },
-            { label: 'Driver', value: delivery.driver_name || 'Assigning driver…' },
+            { label: 'Destination Address', value: delivery.destination?.name || '—' },
+            { label: 'Assigned Driver', value: delivery.driver_name || 'Dispatching operator…' },
             { label: 'Driver Status', value: delivery.driver_status || '—' },
             {
-              label: 'Stops Before You',
-              value: isDelivered ? '—' : `${delivery.stops_before} stop${delivery.stops_before !== 1 ? 's' : ''}`
+              label: 'Waypoints Remaining Ahead',
+              value: isDelivered ? '0' : `${delivery.stops_before} stop${delivery.stops_before !== 1 ? 's' : ''}`
             },
             {
               label: 'Estimated Arrival',
               value: isDelivered
-                ? `Delivered at ${delivery.delivered_at || '—'}`
-                : `~${delivery.eta_minutes} minutes`
+                ? `Delivered (${delivery.delivered_at || 'Completed'})`
+                : `~${delivery.eta_minutes} min`
             },
-            { label: 'OTP Status', value: <StatusPill status={delivery.otp_status || '—'} /> },
+            { label: 'Security Handshake', value: <StatusPill status={delivery.otp_status || '—'} /> },
           ].map(({ label, value }) => (
             <div key={label} style={S.infoRow}>
               <span style={S.infoLabel}>{label}</span>
               <span style={S.infoValue}>{value}</span>
             </div>
           ))}
+
           {isFailed && delivery.failed_reason && (
             <div style={{
-              marginTop: '12px', padding: '12px', borderRadius: '8px',
-              background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
-              fontSize: '13px', color: '#fca5a5',
+              marginTop: '10px',
+              padding: '8px 10px',
+              borderRadius: '4px',
+              background: 'var(--color-danger-subtle, rgba(239, 68, 68, 0.12))',
+              border: '1px solid rgba(239,68,68,0.3)',
+              fontSize: '11px',
+              color: 'var(--color-danger, #ef4444)'
             }}>
-              <span style={{ fontWeight: 700 }}>Reason: </span>{delivery.failed_reason}
+              <strong>Exception Reason:</strong> {delivery.failed_reason}
             </div>
           )}
         </div>
 
-        {/* ── Map Hint (Depot info) ── */}
-        <div style={{ ...S.card, background: 'rgba(30,41,59,0.6)' }}>
-          <div style={S.sectionTitle}>🏢 Distribution Hub</div>
-          <div style={{ fontSize: '13px', color: '#94a3b8' }}>
-            {delivery.depot?.name || 'Connaught Place Central Depot, New Delhi'}
+        {/* ── Origin Hub ── */}
+        <div style={S.card}>
+          <div style={S.sectionTitle}>
+            <Building2 size={13} />
+            <span>Dispatch origin</span>
           </div>
-          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
-            All deliveries originate from this hub
+          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary, #f8fafc)' }}>
+            {delivery.depot?.name || 'Central Logistics Hub, New Delhi'}
+          </div>
+          <div style={{ fontSize: '10px', color: 'var(--text-muted, #64748b)', marginTop: '2px' }}>
+            Consignment dispatched from central facility
           </div>
         </div>
 
         {/* ── Footer ── */}
-        <div style={{ textAlign: 'center', fontSize: '11px', color: '#475569', padding: '12px 0' }}>
-          ⚛ QPath — Quantum-Inspired Delivery Routing · Auto-refreshing every 6s<br />
-          <span style={{ fontSize: '10px', color: '#334155' }}>Delivery ID: {delivery.delivery_id}</span>
+        <div style={{ textAlign: 'center', fontSize: '10px', color: 'var(--text-muted, #64748b)', padding: '12px 0' }}>
+          QPath fleet dispatch · Refresh 6s · ID: {delivery.delivery_id}
         </div>
       </div>
     </div>

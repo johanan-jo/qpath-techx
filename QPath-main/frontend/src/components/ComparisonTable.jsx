@@ -3,8 +3,8 @@ import React from 'react';
 export default function ComparisonTable({ comparison }) {
   if (!comparison || comparison.length === 0) return null;
 
-  const thStyle = { padding: '12px 16px', textAlign: 'left', borderBottom: '1px solid #334155', color: '#94a3b8', fontSize: '12px', textTransform: 'uppercase' };
-  const tdStyle = { padding: '12px 16px', borderBottom: '1px solid #1e293b', fontSize: '14px' };
+  const thStyle = { padding: '12px 16px', textAlign: 'left', borderBottom: '1px solid var(--border-subtle, #242e3f)', color: 'var(--text-muted, #64748b)', fontSize: '11px', fontWeight: 600 };
+  const tdStyle = { padding: '12px 16px', borderBottom: '1px solid var(--border-subtle, #242e3f)', fontSize: '13px' };
 
   const baseline = comparison.find(c => c.algorithm !== 'QPSO') || comparison[0];
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, Truck, Lock, User, ArrowRight, AlertCircle, Sparkles, Navigation } from 'lucide-react';
+import { Shield, Truck, Lock, User, ArrowRight, AlertCircle, KeyRound, Search } from 'lucide-react';
 import { loginUser } from '../services/api';
 
 export default function LoginPage({ onLoginSuccess, onTrackCustomer }) {
@@ -55,126 +55,124 @@ export default function LoginPage({ onLoginSuccess, onTrackCustomer }) {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#090d16',
-      backgroundImage: 'radial-gradient(ellipse 80% 80% at 50% -20%, rgba(59, 130, 246, 0.15), rgba(255, 255, 255, 0))',
-      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-      padding: '20px',
+      backgroundColor: 'var(--bg-canvas, #0f141c)',
+      fontFamily: 'var(--font-sans)',
+      padding: '16px',
       boxSizing: 'border-box'
     }}>
       <div style={{
         width: '100%',
-        maxWidth: '460px',
-        backgroundColor: '#111827',
-        borderRadius: '16px',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 20px rgba(59, 130, 246, 0.1)',
-        padding: '36px 32px',
+        maxWidth: '440px',
+        backgroundColor: 'var(--bg-surface, #171d28)',
+        borderRadius: '8px',
+        border: '1px solid var(--border-subtle, #242e3f)',
+        boxShadow: '0 16px 36px -8px rgba(0, 0, 0, 0.8)',
+        padding: '32px 28px',
         boxSizing: 'border-box'
       }}>
         {/* Logo and Brand Header */}
-        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <div style={{
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: '56px',
-            height: '56px',
-            borderRadius: '14px',
-            background: 'linear-gradient(135deg, #2563eb, #06b6d4)',
+            width: '40px',
+            height: '40px',
+            borderRadius: '6px',
+            background: 'var(--color-primary, #2563eb)',
             color: '#fff',
-            boxShadow: '0 8px 16px rgba(37, 99, 235, 0.35)',
-            marginBottom: '16px'
+            fontWeight: 700,
+            fontSize: '18px',
+            marginBottom: '12px'
           }}>
-            <Navigation size={28} />
+            Q
           </div>
           <h1 style={{
-            margin: '0 0 6px 0',
-            fontSize: '24px',
-            fontWeight: '700',
-            color: '#f8fafc',
-            letterSpacing: '-0.025em'
+            margin: '0 0 4px 0',
+            fontSize: '18px',
+            fontWeight: 700,
+            color: 'var(--text-primary, #f8fafc)',
+            letterSpacing: '-0.3px'
           }}>
-            QPath Logistics
+            QPath Operations Platform
           </h1>
           <p style={{
             margin: 0,
-            fontSize: '13px',
-            color: '#94a3b8',
+            fontSize: '11px',
+            color: 'var(--text-muted, #64748b)',
             lineHeight: '1.4'
           }}>
-            Quantum-Inspired Traffic & Real-Time Delivery Optimization
+            Intelligent Fleet Dispatch & Optimization Engine
           </p>
         </div>
 
         {/* Demo Credentials Quick Fill Pills */}
         <div style={{
-          backgroundColor: '#0f172a',
-          border: '1px solid #1e293b',
-          borderRadius: '10px',
-          padding: '12px 14px',
-          marginBottom: '22px'
+          backgroundColor: 'var(--bg-canvas, #0f141c)',
+          border: '1px solid var(--border-subtle, #242e3f)',
+          borderRadius: '6px',
+          padding: '10px 12px',
+          marginBottom: '20px'
         }}>
           <div style={{
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
-            fontSize: '11px',
-            fontWeight: '600',
-            color: '#38bdf8',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            marginBottom: '8px'
+            fontSize: '10px',
+            fontWeight: 600,
+            color: 'var(--text-muted, #64748b)',
+            marginBottom: '6px'
           }}>
-            <Sparkles size={13} /> Quick-Fill Demo Credentials
+            <span>Operator quick-fill credentials</span>
           </div>
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '8px' }}>
             <button
               type="button"
               onClick={() => handleQuickFill('admin', 'admin123')}
               style={{
-                flex: '1 1 auto',
+                flex: 1,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '6px',
-                padding: '7px 10px',
-                fontSize: '12px',
-                fontWeight: '500',
-                color: '#e2e8f0',
-                backgroundColor: username === 'admin' ? '#1d4ed8' : '#1e293b',
+                gap: '5px',
+                padding: '6px 8px',
+                fontSize: '11px',
+                fontWeight: 600,
+                color: username === 'admin' ? 'var(--text-primary, #f8fafc)' : 'var(--text-secondary, #94a3b8)',
+                backgroundColor: username === 'admin' ? 'var(--bg-surface-raised, #1f2737)' : 'transparent',
                 border: '1px solid',
-                borderColor: username === 'admin' ? '#3b82f6' : '#334155',
-                borderRadius: '6px',
+                borderColor: username === 'admin' ? 'var(--color-primary, #2563eb)' : 'var(--border-subtle, #242e3f)',
+                borderRadius: '4px',
                 cursor: 'pointer',
                 transition: 'all 0.15s ease'
               }}
             >
-              <Shield size={13} color="#60a5fa" />
-              <span><strong>Admin:</strong> admin</span>
+              <Shield size={12} style={{ color: 'var(--color-primary, #2563eb)' }} />
+              <span>Admin</span>
             </button>
             <button
               type="button"
               onClick={() => handleQuickFill('driver1', 'driver1')}
               style={{
-                flex: '1 1 auto',
+                flex: 1,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '6px',
-                padding: '7px 10px',
-                fontSize: '12px',
-                fontWeight: '500',
-                color: '#e2e8f0',
-                backgroundColor: username === 'driver1' ? '#0f766e' : '#1e293b',
+                gap: '5px',
+                padding: '6px 8px',
+                fontSize: '11px',
+                fontWeight: 600,
+                color: username === 'driver1' ? 'var(--text-primary, #f8fafc)' : 'var(--text-secondary, #94a3b8)',
+                backgroundColor: username === 'driver1' ? 'var(--bg-surface-raised, #1f2737)' : 'transparent',
                 border: '1px solid',
-                borderColor: username === 'driver1' ? '#14b8a6' : '#334155',
-                borderRadius: '6px',
+                borderColor: username === 'driver1' ? 'var(--color-success, #10b981)' : 'var(--border-subtle, #242e3f)',
+                borderRadius: '4px',
                 cursor: 'pointer',
                 transition: 'all 0.15s ease'
               }}
             >
-              <Truck size={13} color="#2dd4bf" />
-              <span><strong>Driver:</strong> driver1</span>
+              <Truck size={12} style={{ color: 'var(--color-success, #10b981)' }} />
+              <span>Driver 1</span>
             </button>
           </div>
         </div>
@@ -185,41 +183,40 @@ export default function LoginPage({ onLoginSuccess, onTrackCustomer }) {
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            padding: '10px 14px',
-            backgroundColor: 'rgba(239, 68, 68, 0.12)',
+            padding: '8px 12px',
+            backgroundColor: 'var(--color-danger-subtle, rgba(239, 68, 68, 0.12))',
             border: '1px solid rgba(239, 68, 68, 0.3)',
-            borderRadius: '8px',
-            color: '#f87171',
-            fontSize: '13px',
-            marginBottom: '18px'
+            borderRadius: '4px',
+            color: 'var(--color-danger, #ef4444)',
+            fontSize: '12px',
+            marginBottom: '16px'
           }}>
-            <AlertCircle size={16} style={{ flexShrink: 0 }} />
+            <AlertCircle size={14} style={{ flexShrink: 0 }} />
             <span>{error}</span>
           </div>
         )}
 
         {/* Login Form */}
         <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '16px' }}>
+          <div style={{ marginBottom: '14px' }}>
             <label style={{
               display: 'block',
-              fontSize: '12px',
-              fontWeight: '600',
-              color: '#cbd5e1',
-              marginBottom: '6px',
-              letterSpacing: '0.02em'
+              fontSize: '11px',
+              fontWeight: 600,
+              color: 'var(--text-secondary, #94a3b8)',
+              marginBottom: '4px'
             }}>
-              Username
+              Operator Username
             </label>
             <div style={{ position: 'relative' }}>
               <div style={{
                 position: 'absolute',
-                left: '12px',
+                left: '10px',
                 top: '50%',
                 transform: 'translateY(-50%)',
-                color: '#64748b'
+                color: 'var(--text-muted, #64748b)'
               }}>
-                <User size={16} />
+                <User size={14} />
               </div>
               <input
                 type="text"
@@ -229,40 +226,37 @@ export default function LoginPage({ onLoginSuccess, onTrackCustomer }) {
                 required
                 style={{
                   width: '100%',
-                  padding: '10px 12px 10px 38px',
-                  backgroundColor: '#0b1120',
-                  border: '1px solid #334155',
-                  borderRadius: '8px',
-                  color: '#f8fafc',
-                  fontSize: '14px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  transition: 'border-color 0.15s ease'
+                  padding: '8px 10px 8px 32px',
+                  backgroundColor: 'var(--bg-canvas, #0f141c)',
+                  border: '1px solid var(--border-subtle, #242e3f)',
+                  borderRadius: '4px',
+                  color: 'var(--text-primary, #f8fafc)',
+                  fontSize: '12px',
+                  boxSizing: 'border-box'
                 }}
               />
             </div>
           </div>
 
-          <div style={{ marginBottom: '22px' }}>
+          <div style={{ marginBottom: '18px' }}>
             <label style={{
               display: 'block',
-              fontSize: '12px',
-              fontWeight: '600',
-              color: '#cbd5e1',
-              marginBottom: '6px',
-              letterSpacing: '0.02em'
+              fontSize: '11px',
+              fontWeight: 600,
+              color: 'var(--text-secondary, #94a3b8)',
+              marginBottom: '4px'
             }}>
               Password
             </label>
             <div style={{ position: 'relative' }}>
               <div style={{
                 position: 'absolute',
-                left: '12px',
+                left: '10px',
                 top: '50%',
                 transform: 'translateY(-50%)',
-                color: '#64748b'
+                color: 'var(--text-muted, #64748b)'
               }}>
-                <Lock size={16} />
+                <Lock size={14} />
               </div>
               <input
                 type="password"
@@ -272,15 +266,13 @@ export default function LoginPage({ onLoginSuccess, onTrackCustomer }) {
                 required
                 style={{
                   width: '100%',
-                  padding: '10px 12px 10px 38px',
-                  backgroundColor: '#0b1120',
-                  border: '1px solid #334155',
-                  borderRadius: '8px',
-                  color: '#f8fafc',
-                  fontSize: '14px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  transition: 'border-color 0.15s ease'
+                  padding: '8px 10px 8px 32px',
+                  backgroundColor: 'var(--bg-canvas, #0f141c)',
+                  border: '1px solid var(--border-subtle, #242e3f)',
+                  borderRadius: '4px',
+                  color: 'var(--text-primary, #f8fafc)',
+                  fontSize: '12px',
+                  boxSizing: 'border-box'
                 }}
               />
             </div>
@@ -294,102 +286,89 @@ export default function LoginPage({ onLoginSuccess, onTrackCustomer }) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '8px',
-              padding: '12px 16px',
-              background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+              gap: '6px',
+              padding: '10px 14px',
+              background: 'var(--color-primary, #2563eb)',
               color: '#ffffff',
-              fontSize: '14px',
-              fontWeight: '600',
+              fontSize: '12px',
+              fontWeight: 600,
               border: 'none',
-              borderRadius: '8px',
+              borderRadius: '4px',
               cursor: loading ? 'not-allowed' : 'pointer',
               opacity: loading ? 0.7 : 1,
-              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
               transition: 'all 0.15s ease'
             }}
           >
-            {loading ? (
-              <span>Authenticating...</span>
-            ) : (
-              <>
-                <span>Sign In to Dashboard</span>
-                <ArrowRight size={16} />
-              </>
-            )}
+            <span>{loading ? 'Authenticating...' : 'Sign In to Operations Console'}</span>
+            <ArrowRight size={14} />
           </button>
         </form>
 
         {/* Customer Delivery Tracking Section */}
         <div style={{
-          marginTop: '24px',
-          padding: '16px',
-          backgroundColor: '#0f172a',
-          border: '1px solid #1e293b',
-          borderRadius: '10px',
+          marginTop: '20px',
+          padding: '12px',
+          backgroundColor: 'var(--bg-canvas, #0f141c)',
+          border: '1px solid var(--border-subtle, #242e3f)',
+          borderRadius: '4px',
         }}>
           <div style={{
-            fontSize: '12px',
-            fontWeight: '600',
-            color: '#38bdf8',
-            marginBottom: '8px',
+            fontSize: '10px',
+            fontWeight: 600,
+            color: 'var(--text-muted, #64748b)',
+            marginBottom: '6px',
             display: 'flex',
             alignItems: 'center',
-            gap: '6px'
+            gap: '5px'
           }}>
-            <span>📦</span> Track Delivery (Customer Portal)
+            <KeyRound size={12} />
+            <span>End-customer consignment tracking</span>
           </div>
-          <form onSubmit={handleTrackSubmit} style={{ display: 'flex', gap: '8px' }}>
+          <form onSubmit={handleTrackSubmit} style={{ display: 'flex', gap: '6px' }}>
             <input
               type="text"
               value={customerTokenInput}
               onChange={(e) => setCustomerTokenInput(e.target.value)}
-              placeholder="Enter Delivery Token..."
+              placeholder="Paste delivery token..."
               style={{
                 flex: 1,
-                padding: '8px 12px',
-                backgroundColor: '#0b1120',
-                border: '1px solid #334155',
-                borderRadius: '6px',
-                color: '#f8fafc',
-                fontSize: '13px',
-                outline: 'none',
+                padding: '6px 10px',
+                backgroundColor: 'var(--bg-surface, #171d28)',
+                border: '1px solid var(--border-subtle, #242e3f)',
+                borderRadius: '3px',
+                color: 'var(--text-primary, #f8fafc)',
+                fontSize: '11px',
+                fontFamily: 'var(--font-mono)'
               }}
             />
             <button
               type="submit"
               disabled={!customerTokenInput.trim()}
               style={{
-                padding: '8px 14px',
-                background: customerTokenInput.trim() ? '#0284c7' : '#334155',
+                padding: '6px 12px',
+                background: customerTokenInput.trim() ? 'var(--color-info, #0284c7)' : 'var(--border-strong, #334158)',
                 color: '#ffffff',
-                fontSize: '12px',
-                fontWeight: '600',
+                fontSize: '11px',
+                fontWeight: 600,
                 border: 'none',
-                borderRadius: '6px',
+                borderRadius: '3px',
                 cursor: customerTokenInput.trim() ? 'pointer' : 'not-allowed',
-                whiteSpace: 'nowrap',
-                transition: 'all 0.15s ease'
+                whiteSpace: 'nowrap'
               }}
             >
               Track ➔
             </button>
           </form>
-          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '6px' }}>
-            Customers can track arrival, ETA, and view their OTP without an account.
-          </div>
         </div>
 
-        {/* Security & Isolation Disclaimer */}
+        {/* Footer info */}
         <div style={{
-          marginTop: '20px',
-          paddingTop: '16px',
-          borderTop: '1px solid #1e293b',
+          marginTop: '16px',
           textAlign: 'center',
-          fontSize: '11px',
-          color: '#64748b',
-          lineHeight: '1.5'
+          fontSize: '10px',
+          color: 'var(--text-muted, #64748b)'
         }}>
-          Role-based dispatch isolation enabled. Administrators manage full fleet schedules; Drivers access strictly assigned routes & live traffic.
+          Role-isolated dispatch: Administrators control full fleet; Drivers see assigned routes.
         </div>
       </div>
     </div>
